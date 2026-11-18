@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { supabase } from "../../lib/supabaseClient";
 import LoginAbout from "../../components/LoginAbout.jsx";
+import PasswordField from "../../components/PasswordField.jsx";
 
 const ROLE_TABS = [
   { key: "farmer", label: "Farmer", icon: "fa-user" },
@@ -90,7 +91,7 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="modal-body">
           <label>Email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. renante.salvana@example.com" required /></label>
-          <label>Password <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required /></label>
+          <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} />
           {error && <p className="hint-text" style={{ color: "var(--danger)" }}><i className="fa-solid fa-triangle-exclamation"></i> {error}</p>}
           <button type="submit" className="btn-primary login-submit" disabled={submitting}>
             {submitting ? <><i className="fa-solid fa-spinner fa-spin"></i> Signing in…</> : <><i className="fa-solid fa-right-to-bracket"></i> Sign In</>}
