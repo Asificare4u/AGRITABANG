@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { supabase } from "../../lib/supabaseClient";
+import LoginAbout from "../../components/LoginAbout.jsx";
 
 const ROLE_TABS = [
   { key: "farmer", label: "Farmer", icon: "fa-user" },
@@ -54,6 +55,8 @@ export default function Login() {
 
   return (
     <div className="login-screen">
+      <div className="login-split">
+      <LoginAbout />
       <div className="login-card">
         <div className="login-brand">
           <img src="/agritabang-logo.png" alt="AgriTabang" width="56" height="56" style={{ objectFit: "contain" }} />
@@ -98,6 +101,7 @@ export default function Login() {
           <i className="fa-solid fa-shield-halved"></i>
           <span>Protected by Supabase Authentication &amp; Row-Level Security (RLS) — each role only accesses the modules it is authorized for.</span>
         </div>
+      </div>
       </div>
     </div>
   );
