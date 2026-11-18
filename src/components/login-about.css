@@ -55,3 +55,10 @@
   .team-slide{transition:opacity .2s linear;transform:none !important;}
   .team-progress span{animation:none;width:100%;opacity:.4;}
 }
+
+/* ---- password eye ---- */
+.pw-wrap{position:relative;display:block;}
+.pw-wrap input{width:100%;padding-right:44px;}
+.pw-eye{position:absolute;top:50%;right:6px;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:8px;background:transparent;color:var(--ink-soft,#51604F);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.95rem;}
+.pw-eye:hover{background:rgba(31,107,62,.1);color:var(--forest-deep,#14532D);}
+.pw-eye:focus-visible{outline:2px solid var(--forest,#1F6B3E);outline-offset:1px;}
