@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -23,8 +23,7 @@ export default function Topbar({ onOpenMobileMenu, roleLabel, profilePath }) {
   const { lang, languages, chooseLanguage } = useLanguage();
   const [notifications, setNotifications] = useState([]);
   const [freshIds, setFreshIds] = useState(() => new Set()); // which notifications were new when the bell was opened
-  const [notifHover, setNotifHover] = useState(false);
-  const [notifPulse, setNotifPulse] = useState(0); // bump = restart the 5-second countdown
+  const notifRef = useRef(null);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -65,19 +64,27 @@ export default function Topbar({ onOpenMobileMenu, roleLabel, profilePath }) {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }
 
-  // the bell list vanishes by itself after 5 seconds of not touching it (hover / touch / scroll keeps it open)
+  // The bell list now STAYS open until the user closes it: click the bell again, click anywhere outside, or press Esc.
+  // (Notifications themselves are saved in the database, so they are still there after logging out and in again.)
   useEffect(() => {
-    if (!notifOpen || notifHover) return undefined;
-    const t = setTimeout(() => setNotifOpen(false), 5000);
-    return () => clearTimeout(t);
-  }, [notifOpen, notifHover, notifPulse]);
+    if (!notifOpen) return undefined;
+    const onDown = (e) => { if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false); };
+    const onKey = (e) => { if (e.key === "Escape") setNotifOpen(false); };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [notifOpen]);
 
   function toggleNotif() {
     setAvatarOpen(false);
     if (notifOpen) return setNotifOpen(false);
     const fresh = notifications.filter((n) => !n.read);
     setFreshIds(new Set(fresh.map((n) => n.id)));
-    setNotifHover(false);
     setNotifOpen(true);
     if (fresh.length) markAllRead();
   }
@@ -110,17 +117,13 @@ export default function Topbar({ onOpenMobileMenu, roleLabel, profilePath }) {
           <i className={`fa-solid ${dark ? "fa-sun" : "fa-moon"}`}></i>
         </button>
 
-        <div className="notif-wrap">
+        <div className="notif-wrap" ref={notifRef}>
           <button className="icon-btn" onClick={toggleNotif} aria-label={tr("Notifications")}>
             <i className="fa-solid fa-bell"></i>
             {unread > 0 && <span className="notif-badge">{unread}</span>}
           </button>
           {notifOpen && (
-            <div
-              className="notif-panel"
-              onMouseEnter={() => setNotifHover(true)} onMouseLeave={() => setNotifHover(false)}
-              onTouchStart={() => setNotifPulse((p) => p + 1)} onScroll={() => setNotifPulse((p) => p + 1)}
-            >
+            <div className="notif-panel">
               <h4>{tr("Notifications")}</h4>
               {notifications.length === 0 && <p className="hint-text">{tr("No notifications yet.")}</p>}
               {notifications.map((n) => (

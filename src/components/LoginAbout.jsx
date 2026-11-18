@@ -2,23 +2,23 @@ import React, { useEffect, useState } from "react";
 import "./login-about.css";
 
 // "What is AgriTabang / Who developed it" panel for the login page.
-// The developer slideshow moves to the next person every 3 seconds (pauses while the mouse is over it).
+// The developer slideshow moves to the next person every 3 seconds, by itself, for as long as the login page is open.
+// It never pauses (not on hover, not after a click) - clicking a dot only jumps there and restarts the 3 seconds.
 const TEAM = [
   { name: "Jose Maria P. Cabrera", role: "Documenter", photo: "/developers/cabrera.png", blurb: "Prepares the capstone paper, the user manual and the system documentation." },
   { name: "Jhandie A. Sumihay", role: "Data Analyst", photo: "/developers/sumihay.png", blurb: "Studies the farmer data and survey results the system is built on." },
   { name: "Saliz II R. Pag-oy", role: "Programmer", photo: "/developers/pagoy.png", blurb: "Builds and maintains the AgriTabang web application." },
+  { name: "Roland Justine M. Partos", role: "Adviser", photo: "/developers/partos.png", blurb: "Our capstone adviser, who guides the team and reviews the project." },
 ];
 const SLIDE_MS = 3000;
 
 export default function LoginAbout() {
   const [idx, setIdx] = useState(0);
-  const [paused, setPaused] = useState(false);
 
   useEffect(() => {
-    if (paused) return undefined;
     const t = setTimeout(() => setIdx((i) => (i + 1) % TEAM.length), SLIDE_MS);
     return () => clearTimeout(t);
-  }, [idx, paused]);
+  }, [idx]);
 
   return (
     <section className="about-panel" aria-label="About AgriTabang">
@@ -40,15 +40,9 @@ export default function LoginAbout() {
 
       <span className="about-eyebrow">The developers</span>
       <h3 className="about-subtitle">Who developed AgriTabang?</h3>
-      <p className="about-text about-text-sm">Built by BSIT students of Northern Bukidnon State College as a capstone project.</p>
+      <p className="about-text about-text-sm">Built by BSIT students of Northern Bukidnon State College as a capstone project, guided by their adviser.</p>
 
-      <div
-        className="team-show"
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-        onFocus={() => setPaused(true)}
-        onBlur={() => setPaused(false)}
-      >
+      <div className="team-show">
         <div className="team-stage" aria-live="polite">
           {TEAM.map((m, i) => {
             const offset = (i - idx + TEAM.length) % TEAM.length;
@@ -74,7 +68,7 @@ export default function LoginAbout() {
           </div>
           <span className="team-count">{idx + 1} / {TEAM.length}</span>
         </div>
-        <div className="team-progress"><span key={`${idx}-${paused}`} className={paused ? "paused" : ""} style={{ animationDuration: `${SLIDE_MS}ms` }} /></div>
+        <div className="team-progress"><span key={idx} style={{ animationDuration: `${SLIDE_MS}ms` }} /></div>
       </div>
     </section>
   );
