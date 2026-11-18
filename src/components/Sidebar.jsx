@@ -26,8 +26,8 @@ export const NAV = {
     { to: "/admin", label: "Dashboard", icon: "fa-chart-line", end: true },
     { to: "/admin/announcements", label: "Announcements", icon: "fa-bullhorn" },
     { to: "/admin/farmers", label: "Farmer Profiling", icon: "fa-people-group" },
-    { to: "/admin/rsbsa-validation", label: "RSBSA Validation", icon: "fa-file-circle-check" },
     { to: "/admin/assistance", label: "Assistance Management", icon: "fa-hand-holding-dollar" },
+    { to: "/admin/assistance-announcement", label: "Assistance Announcement", icon: "fa-hand-holding-heart" },
     {
       group: "Reports", icon: "fa-chart-pie",
       items: [
@@ -74,15 +74,12 @@ export default function Sidebar({ role, collapsed, onToggleCollapse, mobileOpen,
 
   // admin: how many crop registrations / change requests are waiting for approval
   const [pendingCrops, setPendingCrops] = useState(0);
-  const [pendingRsbsa, setPendingRsbsa] = useState(0);
   useEffect(() => {
     if (role !== "admin") return undefined;
     let live = true;
     const count = async () => {
       const { count: n } = await supabase.from("crop_registrations").select("id", { count: "exact", head: true }).eq("status", "Pending");
       if (live) setPendingCrops(n || 0);
-      const { count: r } = await supabase.from("rsbsa_submissions").select("id", { count: "exact", head: true }).eq("status", "Pending");
-      if (live) setPendingRsbsa(r || 0);
     };
     count();
     const timer = setInterval(count, 30000);
@@ -135,7 +132,6 @@ export default function Sidebar({ role, collapsed, onToggleCollapse, mobileOpen,
               <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`} onClick={onCloseMobile}>
                 <i className={`fa-solid ${item.icon}`}></i><span>{tr(item.label)}</span>
                 {role === "admin" && item.to === "/admin/crops" && pendingCrops > 0 && <b className="nav-count" title={`${pendingCrops} waiting for approval`}>{pendingCrops}</b>}
-                {role === "admin" && item.to === "/admin/rsbsa-validation" && pendingRsbsa > 0 && <b className="nav-count" title={`${pendingRsbsa} forms waiting for validation`}>{pendingRsbsa}</b>}
               </NavLink>
             )
           )}
