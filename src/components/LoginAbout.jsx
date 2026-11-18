@@ -22,12 +22,11 @@ export default function LoginAbout() {
 
   return (
     <section className="about-panel" aria-label="About AgriTabang">
-      <span className="about-eyebrow">About the system</span>
       <h2 className="about-title">What is <em>AgriTabang</em>?</h2>
       <p className="about-text">
         AgriTabang is a Farmer Profiling and Assistance Management System for Barangay Lindaban,
-        Manolo Fortich, Bukidnon. It helps the Municipal Agriculture Office (MAO) and the Association
-        President keep farmer profiles, crop registrations and harvest records in one place, check who
+        Manolo Fortich, Bukidnon. It helps the Barangay Agricultural Technician Managing Agricultural Network and the
+        Association President keep farmer profiles, crop registrations and harvest records in one place, check who
         qualifies, and give out assistance fairly and openly.
       </p>
       <ul className="about-points">
