@@ -98,7 +98,7 @@ function UserLogTable({ rows, showUser = false, showIp = false, shown, onMore })
 }
 
 // Your own sessions: terminate one, terminate the others, or log out of every device
-function SessionsPanel() {
+function SessionsPanel({ adminControls = false }) {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
   const [sessions, setSessions] = useState(null);
@@ -133,7 +133,7 @@ function SessionsPanel() {
   async function logoutHere() { await logout(); navigate("/login"); }
 
   const active = (sessions || []).filter((s) => !s.ended_at);
-  const isAdmin = profile?.role === "admin"; // only the admin gets Terminate other sessions / Log out all devices
+  const isAdmin = adminControls === true; // only the Admin page passes adminControls; president and farmer never get these buttons
   return (
     <div className="panel" style={{ marginBottom: 18 }}>
       <div className="panel-head">
@@ -484,7 +484,7 @@ function AdminActivityLog() {
 
       {tab === "userlog" && (
         <>
-          <SessionsPanel />
+          <SessionsPanel adminControls />
           <div className="al-filters no-print">
             <select className="filter-select" value={userF} onChange={(e) => setUserF(e.target.value)} aria-label={tr("User")}><option value="all">{tr("All users")}</option>{userOptions.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}</select>
             <div className="table-search"><i className="fa-solid fa-magnifying-glass"></i><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={tr("Search name, IP…")} /></div>

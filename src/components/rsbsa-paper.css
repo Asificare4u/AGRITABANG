@@ -163,3 +163,8 @@
   .rp .bad{outline:0;background-color:transparent}
   .content{padding:0 !important}
 }
+/* RSBSA form photo: exactly 2 x 2 inches (ID size), always the same size, top-right of the form */
+.rp .hdr{grid-template-columns:1fr 2in}
+.rp .photo{width:2in;height:2in;justify-self:end;align-self:start;padding-top:.5in}
+.rp .photo img{width:2in;height:2in;object-fit:cover}
+.rp .photo::after{content:"";position:absolute;inset:0;border-left:1px solid #000;border-bottom:1px solid #000;pointer-events:none}
