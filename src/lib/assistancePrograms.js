@@ -184,6 +184,7 @@ export function notificationPath(n, role) {
     crop_verification: `/${role}/crops`,       // admin: a crop waits for verification             -> Crop Approval
     crop: `/${role}/crops`,                    // farmer: result of a crop registration            -> Crop Registration
     yield: `/${role}/yield`,                   // admin: Yield Reports · farmer: My Yield Records
+    insurance: `/${role}/insurance`,           // admin: a farmer filed a claim · farmer: result of the claim
   };
   if (n.category && byCategory[n.category]) return byCategory[n.category];
   // notifications saved before categories existed: decide from the wording

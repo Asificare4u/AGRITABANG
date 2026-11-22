@@ -7,10 +7,15 @@ import PcicApplication, { PcicView } from "./PcicApplication.jsx";
 import { StatusBadge } from "../../components/Badges.jsx";
 import { computeInsuranceStatus, computeInsuranceBasis, formatPeso, ASSISTANCE_REQUIREMENTS } from "../../lib/businessRules";
 import { tr } from "../../lib/i18n";
+import { logActivity } from "../../lib/activity";
+import ClaimView from "../../components/ClaimPaper.jsx";
+import { CLAIM_CAUSES, claimEstimate, claimNo, causeText } from "../../lib/insuranceClaim";
+
+const blankClaim = { cause: "Typhoon", cause_other: "", calamity_date: "", damaged_area: "", description: "" };
 
 
 export default function FarmerInsurance() {
-  const { farmer } = useAuth();
+  const { farmer, profile } = useAuth();
   const { showToast } = useToast();
   const [rows, setRows] = useState([]);
   const [verifiedYields, setVerifiedYields] = useState([]);
@@ -18,15 +23,21 @@ export default function FarmerInsurance() {
   // null = list | "new" = PCIC application form | { saved } = view a saved application
   const [screen, setScreen] = useState(null);
   const [detailRow, setDetailRow] = useState(null);
+  const [claims, setClaims] = useState([]);
+  const [claimPolicy, setClaimPolicy] = useState(null); // the policy a claim is being filed for
+  const [claimForm, setClaimForm] = useState(blankClaim);
+  const [claimSaving, setClaimSaving] = useState(false);
 
   async function load() {
     if (!farmer?.id) return;
-    const [{ data: regs }, { data: yields }, { data: prices }] = await Promise.all([
+    const [{ data: regs }, { data: yields }, { data: prices }, { data: clm }] = await Promise.all([
       supabase.from("insurance_registrations").select("*").eq("farmer_id", farmer.id).order("registered_at", { ascending: false }),
       supabase.from("yield_records").select("crop_name, quantity_kg").eq("farmer_id", farmer.id).eq("status", "Verified"),
       supabase.from("crop_prices").select("*"),
+      supabase.from("insurance_claims").select("*").eq("farmer_id", farmer.id).order("created_at", { ascending: false }),
     ]);
     setRows(regs || []);
+    setClaims(clm || []);
     setVerifiedYields(yields || []);
     setCropPrices(Object.fromEntries((prices || []).map((p) => [p.crop_name, Number(p.price_per_kg)])));
   }
@@ -34,6 +45,42 @@ export default function FarmerInsurance() {
 
   if (screen === "new") return <PcicApplication onCancel={() => setScreen(null)} onSaved={() => { setScreen(null); load(); }} />;
   if (screen?.saved) return <PcicView saved={screen.saved} onBack={() => setScreen(null)} />;
+  if (screen?.claim) {
+    const info = {
+      name: profile?.full_name, rsbsa: farmer?.rsbsa_number, contact: profile?.contact_number,
+      address: [farmer?.house_no_purok, farmer?.barangay || "Lindaban", "Manolo Fortich, Bukidnon"].filter(Boolean).join(", "),
+    };
+    return <ClaimView claim={screen.claim} policy={rows.find((r) => r.id === screen.claim.insurance_id)} info={info} onBack={() => setScreen(null)} />;
+  }
+
+  function openClaim(policy) { setClaimForm(blankClaim); setClaimPolicy(policy); }
+  async function submitClaim(e) {
+    e.preventDefault();
+    const p = claimPolicy;
+    const dmg = Number(claimForm.damaged_area);
+    const fail = (m) => showToast(m, "fa-triangle-exclamation");
+    if (!claimForm.calamity_date) return fail("Please choose the date the damage happened.");
+    if (!(dmg > 0)) return fail("Enter how many hectares were damaged.");
+    if (dmg > Number(p.area)) return fail(`The damaged area cannot be more than your insured area (${p.area} ha).`);
+    if (claimForm.cause === "Other" && !claimForm.cause_other.trim()) return fail("Please tell us what caused the damage.");
+    const est = claimEstimate(p, dmg, verifiedYields, cropPrices);
+    setClaimSaving(true);
+    const { data, error } = await supabase.from("insurance_claims").insert({
+      insurance_id: p.id, farmer_id: farmer.id, crop_name: p.crop_name, insured_area: p.area,
+      cause: claimForm.cause, cause_other: claimForm.cause === "Other" ? claimForm.cause_other.trim() : null,
+      calamity_date: claimForm.calamity_date, damaged_area: dmg, damage_percentage: est?.pct ?? 0,
+      description: claimForm.description.trim() || null, estimated_amount: est?.amount ?? null,
+      computation: est ? { price: est.price, yieldNote: est.yieldNote, cropValue: est.cropValue, damageValue: est.damageValue, coverageRate: est.coverageRate } : null,
+    }).select().single();
+    setClaimSaving(false);
+    if (error) return fail(/insurance_claims/.test(error.message) && /relation|schema cache/.test(error.message)
+      ? `${error.message} — run supabase/migrations/insurance_claims.sql in the Supabase SQL editor first.` : error.message);
+    logActivity(`Filed a crop insurance claim for ${p.crop_name} — ${dmg} ha damaged`, "insurance");
+    showToast("Claim sent to the Municipal Agriculture Office. You can print it now.", "fa-file-invoice-dollar");
+    setClaimPolicy(null); setDetailRow(null);
+    await load();
+    setScreen({ claim: data });
+  }
 
   return (
     <section>
@@ -66,6 +113,26 @@ export default function FarmerInsurance() {
         </table>
       </div>
 
+      <h3 style={{ margin: "22px 0 8px", fontSize: "1rem" }}><i className="fa-solid fa-file-invoice-dollar"></i> My Insurance Claims</h3>
+      <p className="hint-text"><i className="fa-solid fa-circle-info"></i> Had damage from a calamity? Open a policy above (the eye button) and press <b>File a crop insurance claim</b>. You only claim the part of your farm that was damaged, and you can print the claim form.</p>
+      <div className="table-panel">
+        <table className="data-table">
+          <thead><tr><th>Claim No.</th><th>Crop</th><th>Calamity</th><th>Date</th><th>Damaged</th><th>Assistance</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {claims.length === 0 && <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--ink-soft)" }}>No claims filed yet.</td></tr>}
+            {claims.map((c) => (
+              <tr key={c.id}>
+                <td>{claimNo(c.id)}</td><td>{c.crop_name}</td><td>{causeText(c)}</td><td>{c.calamity_date}</td>
+                <td>{c.damaged_area} ha ({c.status === "Approved" ? c.final_damage_percentage : c.damage_percentage}%)</td>
+                <td>{c.status === "Approved" ? <b>{formatPeso(c.final_amount)}</b> : c.estimated_amount != null ? <span title="Estimate until the MAO confirms the damage">≈ {formatPeso(c.estimated_amount)}</span> : "—"}</td>
+                <td><StatusBadge status={c.status} />{c.status === "Rejected" && c.admin_remarks && <div style={{ fontSize: ".68rem", color: "var(--ink-soft)", marginTop: 2 }}>MAO: {c.admin_remarks}</div>}</td>
+                <td><button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".72rem" }} onClick={() => setScreen({ claim: c })}><i className="fa-solid fa-print"></i> View / Print</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <Modal open={!!detailRow} onClose={() => setDetailRow(null)} title={`${detailRow?.crop_name || ""} — Insurance Record`} icon="fa-shield-heart">
         {detailRow && (() => {
           const basis = computeInsuranceBasis(detailRow, verifiedYields, cropPrices);
@@ -86,6 +153,17 @@ export default function FarmerInsurance() {
                   <button className="btn-primary" onClick={() => { const saved = detailRow.pcic_application; setDetailRow(null); setScreen({ saved }); }}><i className="fa-solid fa-file-lines"></i> {tr("View / Print PCIC Application Form")}</button>
                 </div>
               )}
+              {(() => {
+                const canClaim = effectiveStatus !== "Claimed" && effectiveStatus !== "Cancelled";
+                const waiting = claims.find((c) => c.insurance_id === detailRow.id && c.status === "Pending");
+                return (
+                  <div style={{ padding: "2px 0 10px" }}>
+                    {canClaim && !waiting && <button className="btn-primary" onClick={() => openClaim(detailRow)}><i className="fa-solid fa-file-invoice-dollar"></i> File a crop insurance claim</button>}
+                    {waiting && <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-hourglass-half"></i> A claim for this policy is waiting for the MAO's review ({claimNo(waiting.id)}). <a href="#" onClick={(e) => { e.preventDefault(); setDetailRow(null); setScreen({ claim: waiting }); }}>View / Print it</a></p>}
+                    {!canClaim && <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-circle-info"></i> This policy is {effectiveStatus.toLowerCase()}, so a new claim cannot be filed for it.</p>}
+                  </div>
+                );
+              })()}
               <p className="rsbsa-subhead">{tr("Insurance Calculation Basis")}</p>
               <div className="qual-box">
                 <p style={{ margin: 0 }}>{tr("Crop:")} {detailRow.crop_name}<br />{tr("Farm Area:")} {detailRow.area} {tr("ha")}<br />{tr("Yield used:")} {basis.yieldBasisNote}<br />{tr("Crop Price: ₱")}{basis.price}{tr("/kg")}<br />{tr("Estimated Crop Value:")} {formatPeso(basis.cropValue)}<br />{tr("Coverage Rate:")} {(basis.coverageRate * 100).toFixed(0)}%</p>
@@ -106,6 +184,44 @@ export default function FarmerInsurance() {
                 <p className="hint-text">{tr("No damage claim on file. If undamaged at harvest, estimated coverage would be")} {formatPeso(basis.undamagedEstimate)}.</p>
               )}
             </div>
+          );
+        })()}
+      </Modal>
+
+      {/* FILE A CLAIM: only the damaged part is paid */}
+      <Modal open={!!claimPolicy} onClose={() => !claimSaving && setClaimPolicy(null)} title="File a crop insurance claim" icon="fa-file-invoice-dollar" wide>
+        {claimPolicy && (() => {
+          const est = claimEstimate(claimPolicy, claimForm.damaged_area, verifiedYields, cropPrices);
+          const today = new Date().toISOString().slice(0, 10);
+          const maxDate = claimPolicy.coverage_end_date && claimPolicy.coverage_end_date < today ? claimPolicy.coverage_end_date : today;
+          return (
+            <form className="modal-body" onSubmit={submitClaim}>
+              <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-shield-heart"></i> <span><b>{claimPolicy.crop_name}</b> — {claimPolicy.area} ha insured. Coverage: {claimPolicy.coverage_start_date || "—"} to {claimPolicy.coverage_end_date || "—"}. The damage must have happened during the coverage.</span></p>
+              <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-circle-info"></i> <span>Insurance pays only for the <b>damaged part</b> of your crop, not the whole farm. For example, if 1 of your 4 hectares was damaged, the claim is for 25%.</span></p>
+              <label>Cause of damage <select value={claimForm.cause} onChange={(e) => setClaimForm({ ...claimForm, cause: e.target.value })}>{CLAIM_CAUSES.map((c) => <option key={c}>{c}</option>)}</select></label>
+              {claimForm.cause === "Other" && <label>What caused it? <input value={claimForm.cause_other} onChange={(e) => setClaimForm({ ...claimForm, cause_other: e.target.value })} placeholder="e.g. Rat infestation" required /></label>}
+              <div style={{ display: "flex", gap: 10 }}>
+                <label style={{ flex: 1 }}>Date it happened <input type="date" value={claimForm.calamity_date} min={claimPolicy.coverage_start_date || undefined} max={maxDate} onChange={(e) => setClaimForm({ ...claimForm, calamity_date: e.target.value })} required /></label>
+                <label style={{ flex: 1 }}>Damaged area (hectares) <input type="number" step="0.01" min="0.01" max={claimPolicy.area} value={claimForm.damaged_area} onChange={(e) => setClaimForm({ ...claimForm, damaged_area: e.target.value })} placeholder={`up to ${claimPolicy.area}`} required /></label>
+              </div>
+              <label>What happened? (optional) <textarea rows={3} value={claimForm.description} onChange={(e) => setClaimForm({ ...claimForm, description: e.target.value })} placeholder="e.g. The flood covered the lower part of the field after the heavy rain." /></label>
+              {est ? (
+                <div className="qual-box">
+                  <b>Your estimate</b>
+                  <p style={{ margin: 0 }}>
+                    Damaged: {claimForm.damaged_area} ha of {claimPolicy.area} ha = <b>{est.pct}%</b><br />
+                    Value of the whole crop: {formatPeso(est.cropValue)} <span style={{ color: "var(--ink-soft)" }}>({est.yieldNote}, ₱{est.price}/kg)</span><br />
+                    Value of the damaged part: {formatPeso(est.damageValue)}<br />
+                    <b>Estimated insurance assistance: {formatPeso(est.amount)}</b> <span style={{ color: "var(--ink-soft)" }}>({Math.round(est.coverageRate * 100)}% of the damaged value)</span>
+                  </p>
+                  <p className="hint-text" style={{ margin: "6px 0 0" }}>This is only an estimate. The MAO will inspect your farm and confirm the damage before the final amount is set.</p>
+                </div>
+              ) : <p className="hint-text" style={{ margin: 0 }}>Enter the damaged area to see your estimate.</p>}
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={() => setClaimPolicy(null)} disabled={claimSaving}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={claimSaving}>{claimSaving ? "Sending…" : <><i className="fa-solid fa-paper-plane"></i> Submit claim</>}</button>
+              </div>
+            </form>
           );
         })()}
       </Modal>

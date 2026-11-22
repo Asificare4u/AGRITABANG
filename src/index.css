@@ -1048,3 +1048,27 @@ body.dark .al-badge.act{background:#32284A;color:#C9B5EE;}
 .reset-token-input{font-family:ui-monospace,Consolas,monospace;letter-spacing:.18em;text-transform:uppercase;}
 .reset-token-box{margin:6px 0 10px;padding:16px;text-align:center;font-family:ui-monospace,Consolas,monospace;font-size:2rem;font-weight:700;letter-spacing:.25em;color:var(--forest-deep);background:var(--sage-pale);border:2px dashed var(--forest);border-radius:12px;user-select:all;}
 .reset-token-notes{margin:0 0 12px;padding-left:18px;font-size:.8rem;line-height:1.55;color:var(--ink-soft);}
+
+/* ---- Crop insurance claim form (printable) ---- */
+.claim-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.claim-paper{max-width:820px;margin:0 auto;background:#fff;color:#111;border:1px solid #cfd6cc;border-radius:6px;padding:22px 28px;font-family:Georgia,"Times New Roman",serif;font-size:.8rem;line-height:1.4;}
+.claim-head{text-align:center;border-bottom:2px solid #111;padding-bottom:8px;margin-bottom:6px;}
+.claim-head p{margin:0;font-size:.74rem;}
+.claim-head h1{margin:6px 0 4px;font-size:1.15rem;letter-spacing:.04em;}
+.claim-head .claim-meta{font-size:.78rem;}
+.claim-paper h2{margin:11px 0 4px;font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;}
+.claim-table{width:100%;border-collapse:collapse;}
+.claim-table th,.claim-table td{border:1px solid #444;padding:4px 7px;text-align:left;vertical-align:top;}
+.claim-table th{width:19%;background:#f1f1ec;font-weight:700;}
+.claim-table.claim-wide th{width:34%;}
+.claim-note{font-size:.7rem;color:#444;}
+.claim-total th,.claim-total td{background:#f6f3e4;font-size:.86rem;}
+.claim-fine{margin:6px 0;font-size:.72rem;color:#333;}
+.claim-sign{display:flex;gap:40px;margin-top:26px;}
+.claim-sign div{flex:1;text-align:center;font-size:.7rem;}
+.claim-sign span{display:block;border-bottom:1px solid #111;height:22px;margin-bottom:3px;}
+@media print{
+  .claim-paper{border:none;border-radius:0;padding:0;max-width:none;font-size:10pt;}
+  .claim-paper h2{break-after:avoid;}
+  .claim-table,.claim-sign{break-inside:avoid;}
+}

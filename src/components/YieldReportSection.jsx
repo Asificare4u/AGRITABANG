@@ -10,7 +10,7 @@ export default function YieldReportSection({ farmer = "All", dateFrom = "", date
   const [rows, setRows] = useState([]);
   const scope = useMemberScope(); // president: association members only
   useEffect(() => {
-    supabase.from("yield_report").select("*").order("harvest_date", { ascending: false }).then(({ data }) => setRows(data || []));
+    supabase.from("yield_report").select("*").order("submitted_at", { ascending: false }).then(({ data }) => setRows(data || []));
   }, []);
 
   const filtered = useMemo(() => rows.filter((r) => {

@@ -4,6 +4,8 @@ import { useToast } from "../../context/ToastContext.jsx";
 import Modal from "../../components/Modal.jsx";
 import { StatusBadge } from "../../components/Badges.jsx";
 import { computeInsuranceStatus, computeInsuranceBasis, formatPeso } from "../../lib/businessRules";
+import ClaimView from "../../components/ClaimPaper.jsx";
+import { claimEstimate, claimNo, causeText } from "../../lib/insuranceClaim";
 
 export default function AdminInsurance() {
   const { showToast } = useToast();
@@ -15,16 +17,25 @@ export default function AdminInsurance() {
   const [detailRow, setDetailRow] = useState(null);
   const [claimForm, setClaimForm] = useState(null); // { estimated_damage_percentage, claim_date, status }
   const [saving, setSaving] = useState(false);
+  const [claims, setClaims] = useState([]);       // claim applications filed by farmers
+  const [dir, setDir] = useState({});             // farmer id -> directory row (for the printed form)
+  const [review, setReview] = useState(null);     // the claim being reviewed
+  const [decision, setDecision] = useState({ pct: "", remarks: "" });
+  const [deciding, setDeciding] = useState(false);
+  const [claimView, setClaimView] = useState(null); // print screen
 
   async function load() {
-    const [{ data }, { data: dir }, { data: prices }, { data: yields }] = await Promise.all([
+    const [{ data }, { data: dirRows }, { data: prices }, { data: yields }, { data: clm }] = await Promise.all([
       supabase.from("insurance_registrations").select("*").order("registered_at", { ascending: false }),
-      supabase.from("farmer_directory").select("id, full_name"),
+      supabase.from("farmer_directory").select("id, full_name, rsbsa_number, house_no_purok, barangay, contact_number"),
       supabase.from("crop_prices").select("*"),
       supabase.from("yield_records").select("farmer_id, crop_name, quantity_kg").eq("status", "Verified"),
+      supabase.from("insurance_claims").select("*").order("created_at", { ascending: false }),
     ]);
+    setClaims(clm || []);
+    setDir(Object.fromEntries((dirRows || []).map((d) => [d.id, d])));
     setRows(data || []);
-    setNames(Object.fromEntries((dir || []).map((d) => [d.id, d.full_name])));
+    setNames(Object.fromEntries((dirRows || []).map((d) => [d.id, d.full_name])));
     setCropPrices(Object.fromEntries((prices || []).map((p) => [p.crop_name, Number(p.price_per_kg)])));
     const grouped = {};
     (yields || []).forEach((y) => { (grouped[y.farmer_id] ||= []).push(y); });
@@ -79,6 +90,42 @@ export default function AdminInsurance() {
     load();
   }
 
+  function infoFor(farmerId) {
+    const d = dir[farmerId] || {};
+    return { name: d.full_name, rsbsa: d.rsbsa_number, contact: d.contact_number, address: [d.house_no_purok, d.barangay || "Lindaban", "Manolo Fortich, Bukidnon"].filter(Boolean).join(", ") };
+  }
+  function openReview(c) { setReview(c); setDecision({ pct: String(c.damage_percentage ?? ""), remarks: "" }); }
+  const reviewPolicy = review ? rows.find((r) => r.id === review.insurance_id) : null;
+  const reviewEst = review && reviewPolicy ? claimEstimate(reviewPolicy, review.damaged_area, yieldsByFarmer[review.farmer_id] || [], cropPrices, decision.pct) : null;
+
+  async function decide(approve) {
+    const who = names[review.farmer_id] || "this farmer";
+    if (approve) {
+      if (!reviewEst) return showToast("Enter the confirmed damage, from 1 to 100 percent.", "fa-triangle-exclamation");
+      if (!confirm(`Are you sure you want to approve ${who}'s ${review.crop_name} claim?\n\nConfirmed damage: ${reviewEst.pct}%\nInsurance assistance: ${formatPeso(reviewEst.amount)}\n\nThe policy will be marked Claimed and the farmer will be notified.`)) return;
+    } else {
+      if (!decision.remarks.trim()) return showToast("Please write the reason for rejecting this claim.", "fa-triangle-exclamation");
+      if (!confirm(`Are you sure you want to reject ${who}'s ${review.crop_name} claim? The farmer will see your reason.`)) return;
+    }
+    setDeciding(true);
+    const { error } = await supabase.rpc("decide_insurance_claim", {
+      p_claim: review.id, p_approve: approve,
+      p_damage_pct: approve ? reviewEst.pct : null, p_damage_value: approve ? reviewEst.damageValue : null,
+      p_amount: approve ? reviewEst.amount : null, p_remarks: decision.remarks,
+    });
+    setDeciding(false);
+    if (error) return showToast(error.message, "fa-triangle-exclamation");
+    showToast(approve ? "Claim approved and recorded." : "Claim rejected.", approve ? "fa-circle-check" : "fa-circle-xmark");
+    setReview(null);
+    load();
+  }
+
+  if (claimView) {
+    return <ClaimView claim={claimView} policy={rows.find((r) => r.id === claimView.insurance_id)} info={infoFor(claimView.farmer_id)} onBack={() => setClaimView(null)} />;
+  }
+
+  const pendingClaims = claims.filter((c) => c.status === "Pending").length;
+
   return (
     <section>
       <div className="view-head">
@@ -88,6 +135,27 @@ export default function AdminInsurance() {
         </select>
       </div>
       <p className="hint-text"><i className="fa-solid fa-circle-info"></i> Every crop insurance record, municipality-wide — including expired policies, kept visible for history and reporting.</p>
+      <h3 style={{ margin: "6px 0 8px", fontSize: "1rem" }}><i className="fa-solid fa-file-invoice-dollar"></i> Claim Applications {pendingClaims > 0 && <span className="status-badge status-pending" style={{ marginLeft: 6 }}>{pendingClaims} waiting</span>}</h3>
+      <p className="hint-text"><i className="fa-solid fa-circle-info"></i> Filed by farmers after a calamity. A claim is paid only for the <b>damaged part</b> of the crop. Review it, confirm the damage after inspecting the farm, then approve or reject.</p>
+      <div className="table-panel" style={{ marginBottom: 18 }}>
+        <table className="data-table">
+          <thead><tr><th>Claim No.</th><th>Farmer</th><th>Crop</th><th>Calamity</th><th>Date</th><th>Damaged</th><th>Assistance</th><th>Filed</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            {claims.length === 0 && <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--ink-soft)" }}>No claim applications yet.</td></tr>}
+            {claims.map((c) => (
+              <tr key={c.id}>
+                <td>{claimNo(c.id)}</td><td>{names[c.farmer_id] || "—"}</td><td>{c.crop_name}</td><td>{causeText(c)}</td><td>{c.calamity_date}</td>
+                <td>{c.damaged_area} of {c.insured_area} ha ({c.status === "Approved" ? c.final_damage_percentage : c.damage_percentage}%)</td>
+                <td>{c.status === "Approved" ? <b>{formatPeso(c.final_amount)}</b> : c.estimated_amount != null ? `≈ ${formatPeso(c.estimated_amount)}` : "—"}</td>
+                <td>{new Date(c.created_at).toLocaleDateString("en-PH")}</td>
+                <td><StatusBadge status={c.status} /></td>
+                <td><button className="btn-ghost" style={{ padding: "4px 10px", fontSize: ".72rem" }} onClick={() => openReview(c)}><i className="fa-solid fa-eye"></i> {c.status === "Pending" ? "Review" : "View"}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <div className="qual-box">
         <b>New Registration vs. Renewal</b>
         <p style={{ margin: 0 }}>A record is a <b>Renewal</b> whenever the farmer already has any prior record for that same crop (regardless of that prior record's outcome) — this applies to every farmer with history for that crop, not a special member category. A brand-new crop/farmer pairing is a <b>New Registration</b>. The system blocks creating a duplicate while an existing policy for that crop is still Active.</p>
@@ -165,6 +233,62 @@ export default function AdminInsurance() {
             <label>Date of Claim <input type="date" value={claimForm.claim_date} onChange={(e) => setClaimForm({ ...claimForm, claim_date: e.target.value })} required /></label>
             <div className="modal-actions"><button type="button" className="btn-ghost" onClick={() => setClaimForm(null)}>Cancel</button><button type="submit" className="btn-primary" disabled={saving}><i className="fa-solid fa-floppy-disk"></i> {saving ? "Saving…" : "Save Claim"}</button></div>
           </form>
+        )}
+      </Modal>
+
+      {/* REVIEW A CLAIM */}
+      <Modal open={!!review} onClose={() => !deciding && setReview(null)} title={review ? `Claim ${claimNo(review.id)}` : "Claim"} icon="fa-file-invoice-dollar" wide>
+        {review && (
+          <div className="modal-body">
+            <ul className="detail-list">
+              <li><span>Farmer</span><b>{names[review.farmer_id] || "—"}</b></li>
+              <li><span>Crop</span><b>{review.crop_name} — {review.insured_area} ha insured</b></li>
+              <li><span>Cause</span><b>{causeText(review)}</b></li>
+              <li><span>Date it happened</span><b>{review.calamity_date}</b></li>
+              <li><span>Damaged area reported</span><b>{review.damaged_area} ha ({review.damage_percentage}%)</b></li>
+              <li><span>Farmer's description</span><b>{review.description || "—"}</b></li>
+              <li><span>Filed</span><b>{new Date(review.created_at).toLocaleString("en-PH")}</b></li>
+              <li><span>Status</span><b>{review.status}</b></li>
+            </ul>
+
+            {review.status === "Pending" ? (
+              <>
+                <p className="rsbsa-subhead">Confirm the damage after inspecting the farm</p>
+                <label>Confirmed damage (%) <input type="number" min="1" max="100" step="0.01" value={decision.pct} onChange={(e) => setDecision({ ...decision, pct: e.target.value })} /></label>
+                {reviewEst ? (
+                  <div className="qual-box">
+                    <p style={{ margin: 0 }}>
+                      Value of the whole crop: {formatPeso(reviewEst.cropValue)} <span style={{ color: "var(--ink-soft)" }}>({reviewEst.yieldNote}, ₱{reviewEst.price}/kg)</span><br />
+                      Value of the damaged part ({reviewEst.pct}%): {formatPeso(reviewEst.damageValue)}<br />
+                      <b>Insurance assistance: {formatPeso(reviewEst.amount)}</b> <span style={{ color: "var(--ink-soft)" }}>({Math.round(reviewEst.coverageRate * 100)}% of the damaged value)</span>
+                    </p>
+                  </div>
+                ) : <p className="hint-text">Enter a damage percentage from 1 to 100 to see the assistance amount.</p>}
+                <label>Remarks <span style={{ color: "var(--ink-soft)", fontWeight: 400 }}>(required when rejecting; the farmer sees it)</span> <textarea rows={2} value={decision.remarks} onChange={(e) => setDecision({ ...decision, remarks: e.target.value })} /></label>
+                <div className="modal-actions">
+                  <button type="button" className="btn-ghost" onClick={() => { const c = review; setReview(null); setClaimView(c); }}><i className="fa-solid fa-print"></i> Print</button>
+                  <button type="button" className="btn-ghost" onClick={() => decide(false)} disabled={deciding}><i className="fa-solid fa-xmark"></i> Reject</button>
+                  <button type="button" className="btn-primary" onClick={() => decide(true)} disabled={deciding}><i className="fa-solid fa-check"></i> {deciding ? "Saving…" : "Approve claim"}</button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="qual-box">
+                  <p style={{ margin: 0 }}>
+                    {review.status === "Approved"
+                      ? <>Confirmed damage: <b>{review.final_damage_percentage}%</b><br /><b>Insurance assistance: {formatPeso(review.final_amount)}</b><br /></>
+                      : <b>Rejected</b>}
+                    {review.admin_remarks && <>Remarks: {review.admin_remarks}<br /></>}
+                    {review.reviewed_at && <>Decided: {new Date(review.reviewed_at).toLocaleString("en-PH")}</>}
+                  </p>
+                </div>
+                <div className="modal-actions">
+                  <button type="button" className="btn-ghost" onClick={() => { const c = review; setReview(null); setClaimView(c); }}><i className="fa-solid fa-print"></i> Print</button>
+                  <button type="button" className="btn-primary" onClick={() => setReview(null)}>Close</button>
+                </div>
+              </>
+            )}
+          </div>
         )}
       </Modal>
     </section>
