@@ -8,6 +8,7 @@ import Modal from "../../components/Modal.jsx";
 import { StatusBadge } from "../../components/Badges.jsx";
 import { YIELD_UNITS, YIELD_UNIT_LABELS, yieldUnitText } from "../../lib/businessRules";
 import { tr } from "../../lib/i18n";
+import { autoHarvestFor, prettyDate } from "../../lib/harvest";
 
 const OTHER = "Other";
 const blank = { crop_name: "", season: "", quantity: "", unit: "kg", unit_other: "", kg_per_unit: "", harvest_date: "" };
@@ -22,6 +23,7 @@ export default function FarmerYield() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [rows, setRows] = useState([]);
+  const [regs, setRegs] = useState([]);              // the farmer's crop registrations (used to fill in the harvest date)
   const [crops, setCrops] = useState(null);          // names of registered crops (null = loading)
   const [filter, setFilter] = useState("All");
   const [open, setOpen] = useState(false);
@@ -33,10 +35,11 @@ export default function FarmerYield() {
   async function load() {
     if (!farmer?.id) return;
     const [{ data }, { data: regs }] = await Promise.all([
-      supabase.from("yield_records").select("*").eq("farmer_id", farmer.id).order("harvest_date", { ascending: false }),
-      supabase.from("crop_registrations").select("crop_name, status").eq("farmer_id", farmer.id),
+      supabase.from("yield_records").select("*").eq("farmer_id", farmer.id).order("created_at", { ascending: false }), // newest report on top
+      supabase.from("crop_registrations").select("crop_name, status, area, planting_date, registered_at, cropping_schedule, pcic_application").eq("farmer_id", farmer.id),
     ]);
     setRows(data || []);
+    setRegs(regs || []);
     const seen = new Set(); const names = [];
     (regs || []).filter((r) => (r.status || "Pending") !== "Rejected").forEach((r) => {
       const k = (r.crop_name || "").trim().toLowerCase();
@@ -56,7 +59,7 @@ export default function FarmerYield() {
   function openNew() {
     if (!crops || crops.length === 0) return setNeedCrop(true);
     setEditing(null);
-    setForm({ ...blank, crop_name: crops[0] });
+    setForm({ ...blank, crop_name: crops[0], harvest_date: autoHarvestFor(crops[0], regs)?.date || "" });
     setOpen(true);
   }
   function openEdit(r) {
@@ -157,7 +160,7 @@ export default function FarmerYield() {
           {editing && editing.status !== "Pending" && (
             <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-circle-info"></i> This report is <b>{editing.status}</b>. After you save, it goes back to <b>Pending</b> so the admin can verify the corrected numbers.</p>
           )}
-          <label>{tr("Crop / Plant Name")} <select value={form.crop_name} onChange={(e) => setForm({ ...form, crop_name: e.target.value })} required>{options.map((c) => <option key={c}>{c}</option>)}</select></label>
+          <label>{tr("Crop / Plant Name")} <select value={form.crop_name} onChange={(e) => { const auto = autoHarvestFor(e.target.value, regs)?.date; setForm({ ...form, crop_name: e.target.value, harvest_date: auto ?? (editing ? form.harvest_date : "") }); }} required>{options.map((c) => <option key={c}>{c}</option>)}</select></label>
           <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-circle-info"></i> Only crops you registered in Crop Registration are listed.</p>
           <label>{tr("Season")} <input type="text" value={form.season} onChange={(e) => setForm({ ...form, season: e.target.value })} placeholder={tr("e.g. Wet Season 2026")} required /></label>
           <div style={{ display: "flex", gap: 10 }}>
@@ -172,6 +175,12 @@ export default function FarmerYield() {
           )}
           {form.unit !== "kg" && <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-circle-info"></i> {tr("For reports and insurance estimates this is converted to a kg-equivalent (")}{form.unit === OTHER ? (form.kg_per_unit ? `${form.kg_per_unit} kg per ${form.unit_other.trim() || "unit"}` : "assumed 1:1 — add the kg per unit above for a more accurate figure") : "50 kg each"}).</p>}
           <label>{tr("Harvest Date")} <input type="date" value={form.harvest_date} onChange={(e) => setForm({ ...form, harvest_date: e.target.value })} required /></label>
+          {(() => {
+            const auto = autoHarvestFor(form.crop_name, regs);
+            return auto
+              ? <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-wand-magic-sparkles"></i> Filled in automatically from your Crop Registration (harvest expected {prettyDate(auto.date)}). Change it only if you harvested on a different day.</p>
+              : <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-circle-info"></i> No harvest date was found in your Crop Registration for this crop, so please enter it.</p>;
+          })()}
           <div className="modal-actions"><button type="button" className="btn-ghost" onClick={close}>{tr("Cancel")}</button><button type="submit" className="btn-primary" disabled={saving}><i className="fa-solid fa-floppy-disk"></i> {saving ? "Saving…" : editing ? "Save changes" : "Save"}</button></div>
         </form>
       </Modal>

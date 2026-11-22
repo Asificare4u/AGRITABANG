@@ -1,3 +1,4 @@
+import { registeredHarvestDate } from "../../lib/harvest";
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import { logActivity } from "../../lib/activity";
@@ -105,12 +106,12 @@ export default function FarmerCrops() {
       <p className="hint-text"><i className="fa-solid fa-circle-info"></i> <span>{tr("Register Crop opens the PCIC Application for Crop Insurance (one long bond sheet). A newly registered crop is Pending until the MAO verifies it — only verified crops count toward assistance eligibility. Need to change something (wrong plant, area, date…)? Press")} <b>{tr("Request change")}</b> {tr("on that crop and give a reason. It is sent to the admin's Crop Approval page and the crop goes back to Pending until it is approved. Registrations can't be deleted.")}</span></p>
       <div className="table-panel">
         <table className="data-table">
-          <thead><tr><th>{tr("Crop / Plant Name")}</th><th>{tr("Area (ha)")}</th><th>{tr("Planting Date")}</th><th>{tr("Variety")}</th><th>{tr("Land Category")}</th><th>{tr("Tenurial Status")}</th><th>{tr("Verification")}</th><th>{tr("Insurance")}</th><th></th></tr></thead>
+          <thead><tr><th>{tr("Crop / Plant Name")}</th><th>{tr("Area (ha)")}</th><th>{tr("Planting Date")}</th><th>{tr("Expected Harvest")}</th><th>{tr("Variety")}</th><th>{tr("Land Category")}</th><th>{tr("Tenurial Status")}</th><th>{tr("Verification")}</th><th>{tr("Insurance")}</th><th></th></tr></thead>
           <tbody>
-            {rows.length === 0 && <tr><td colSpan={9} style={{ textAlign: "center", color: "var(--ink-soft)" }}>{tr("No crops registered yet.")}</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--ink-soft)" }}>{tr("No crops registered yet.")}</td></tr>}
             {rows.map((r) => (
               <tr key={r.id}>
-                <td>{r.crop_name}</td><td>{r.area}</td><td>{r.planting_date}</td><td>{r.variety || "—"}</td><td>{r.land_category || "—"}</td><td>{r.tenurial_status || "—"}</td>
+                <td>{r.crop_name}</td><td>{r.area}</td><td>{r.planting_date}</td><td>{registeredHarvestDate(r) || "—"}</td><td>{r.variety || "—"}</td><td>{r.land_category || "—"}</td><td>{r.tenurial_status || "—"}</td>
                 <td>
                   <StatusBadge status={r.status || "Pending"} />
                   {r.status === "Rejected" && r.remarks && <div style={{ fontSize: ".68rem", color: "var(--ink-soft)", marginTop: 2 }}>{tr("MAO:")} {r.remarks}</div>}
