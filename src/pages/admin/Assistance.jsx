@@ -133,6 +133,11 @@ export default function AdminAssistance() {
     if (qty !== undefined && !(Number(qty) >= 0)) return showToast("Amount / quantity cannot be negative.", "fa-triangle-exclamation");
     const unit = qty === undefined ? null : type === "Cash Aid" ? "PHP" : type === "Farming Equipment" ? "Units" : (d.unit || null);
 
+    if (status === "Released" || status === "Denied") {
+      const who = directory[reviewRow.farmer_id]?.full_name || "this farmer";
+      if (!confirm(`Are you sure you want to ${status === "Released" ? "release" : "deny"} the ${reviewRow.program_title || type} application of ${who}?\n\nThe farmer will be notified.`)) return;
+    }
+
     setSaving(true);
     const { data: { user } } = await supabase.auth.getUser();
     const payload = {
