@@ -4,6 +4,8 @@ import { useAuth } from "../../context/AuthContext.jsx";
 import { supabase } from "../../lib/supabaseClient";
 import LoginAbout from "../../components/LoginAbout.jsx";
 import PasswordField from "../../components/PasswordField.jsx";
+import SavedAccounts from "../../components/SavedAccounts.jsx";
+import { saveAccount } from "../../lib/savedAccounts";
 
 const ROLE_TABS = [
   { key: "farmer", label: "Farmer", icon: "fa-user" },
@@ -19,6 +21,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [remember, setRemember] = useState(true);
+  const [savedTick, setSavedTick] = useState(0);
 
   if (!loading && session && role) return <Navigate to={`/${role}`} replace />;
 
@@ -34,7 +38,7 @@ export default function Login() {
       // — logging in as an ADMIN account from the Farmer tab (or any other
       // mismatch) is rejected immediately, before they ever reach a dashboard.
       const { data: profileRow, error: profileErr } = await supabase
-        .from("profiles").select("role").eq("id", data.user.id).single();
+        .from("profiles").select("role, full_name").eq("id", data.user.id).single();
       if (profileErr || !profileRow) {
         await supabase.auth.signOut();
         setError("Could not verify this account's role. Please try again.");
@@ -45,6 +49,7 @@ export default function Login() {
         setError(`This account is registered as ${ROLE_LABEL[profileRow.role] || profileRow.role}, not ${ROLE_LABEL[activeTab]}. Select the correct tab above and try again.`);
         return;
       }
+      if (remember) { saveAccount({ email, role: activeTab, name: profileRow.full_name }); setSavedTick((t) => t + 1); }
       // Role matches — AuthContext's onAuthStateChange will pick up the
       // session and populate `role`; the redirect above handles the rest.
     } catch (err) {
@@ -82,16 +87,19 @@ export default function Login() {
               key={t.key}
               type="button"
               className={`login-role-tab ${activeTab === t.key ? "active" : ""}`}
-              onClick={() => setActiveTab(t.key)}
+              onClick={() => { setActiveTab(t.key); setEmail(""); setPassword(""); setError(""); }}
             >
               <i className={`fa-solid ${t.icon}`}></i> {t.label}
             </button>
           ))}
         </div>
 
+        <SavedAccounts role={activeTab} refreshKey={savedTick} onPick={(a) => { setEmail(a.email); setPassword(""); setError(""); setTimeout(() => document.getElementById("login-password")?.focus(), 0); }} />
+
         <form onSubmit={handleSubmit} className="modal-body">
-          <label>Email <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. renante.salvana@example.com" required /></label>
+          <label>Email <input type="email" name="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. renante.salvana@example.com" required /></label>
           <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} />
+          <label className="remember-row"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember this account on this device</label>
           {error && <p className="hint-text" style={{ color: "var(--danger)" }}><i className="fa-solid fa-triangle-exclamation"></i> {error}</p>}
           <button type="submit" className="btn-primary login-submit" disabled={submitting}>
             {submitting ? <><i className="fa-solid fa-spinner fa-spin"></i> Signing in…</> : <><i className="fa-solid fa-right-to-bracket"></i> Sign In</>}
