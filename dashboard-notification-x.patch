@@ -1,0 +1,181 @@
+diff --git a/src/components/AnnounceStrip.jsx b/src/components/AnnounceStrip.jsx
+new file mode 100644
+index 0000000..2cf7820
+--- /dev/null
++++ b/src/components/AnnounceStrip.jsx
+@@ -0,0 +1,51 @@
++import React, { useState } from "react";
++import { tr } from "../lib/i18n";
++
++// Cards shown at the very top of every dashboard (latest announcements).
++// The small X on the LEFT hides a card for this user. It only hides the card on the dashboard:
++// the same announcement is still in the notification bell and on the Announcements page.
++const KEY = (userId) => `agritabang.dismissedAnnouncements.${userId || "guest"}`;
++
++function loadDismissed(userId) {
++  try {
++    const raw = window.localStorage.getItem(KEY(userId));
++    const list = raw ? JSON.parse(raw) : [];
++    return Array.isArray(list) ? list : [];
++  } catch {
++    return [];
++  }
++}
++
++export default function AnnounceStrip({ announcements, userId }) {
++  const [dismissed, setDismissed] = useState(() => loadDismissed(userId));
++
++  function dismiss(id) {
++    const next = Array.from(new Set([...dismissed, id])).slice(-200); // keep the list short
++    setDismissed(next);
++    try { window.localStorage.setItem(KEY(userId), JSON.stringify(next)); } catch { /* storage blocked: it just reappears next visit */ }
++  }
++
++  const visible = (announcements || []).filter((a) => !dismissed.includes(a.id));
++  if (visible.length === 0) return null;
++
++  return (
++    <div className="announce-top-strip">
++      <div className="announce-top-title"><i className="fa-solid fa-bell"></i> {tr("Notifications")}</div>
++      {visible.map((a) => (
++        <div className="announce-top-card" key={a.id}>
++          <button type="button" className="announce-x" onClick={() => dismiss(a.id)} aria-label="Hide this notification" title="Hide (it stays in the bell)">
++            <i className="fa-solid fa-xmark"></i>
++          </button>
++          <i className={`fa-solid ${a.icon || "fa-bullhorn"}`}></i>
++          <div>
++            <div className="announce-top-head">
++              <b>{a.title}</b>
++              <span>{new Date(a.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</span>
++            </div>
++            <p>{a.body}</p>
++          </div>
++        </div>
++      ))}
++    </div>
++  );
++}
+diff --git a/src/index.css b/src/index.css
+index 921998f..2e3676a 100644
+--- a/src/index.css
++++ b/src/index.css
+@@ -808,6 +808,14 @@ body.dark .theme-toggle{color:var(--gold-light);}
+ .announce-top-head span{font-size:.72rem;color:var(--ink-soft);white-space:nowrap;}
+ .announce-top-card p{margin:4px 0 0;font-size:.82rem;color:var(--ink-soft);}
+ 
++.announce-top-title{display:flex;align-items:center;gap:8px;margin:0 0 -2px 2px;color:var(--forest-deep);font-family:var(--font-display);font-size:.95rem;font-weight:700;}
++.announce-top-title i{font-size:.85rem;color:var(--gold);}
++/* small X on the LEFT of each dashboard notification card: hides it here, it stays in the bell */
++.announce-x{flex-shrink:0;width:22px;height:22px;margin-top:1px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:transparent;color:var(--ink-soft);font-size:.8rem;line-height:1;cursor:pointer;transition:background .15s,color .15s;}
++.announce-x:hover{background:rgba(0,0,0,.08);color:var(--forest-deep);}
++.announce-x:focus-visible{outline:2px solid var(--forest);outline-offset:1px;}
++body.dark .announce-x:hover{background:rgba(255,255,255,.14);}
++
+ /* ---- Centered profile layout ---- */
+ .profile-center-wrap{max-width:640px;margin:0 auto;}
+ .profile-center-header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:8px 4px 18px;}
+diff --git a/src/pages/admin/Dashboard.jsx b/src/pages/admin/Dashboard.jsx
+index 62a8562..bd38f96 100644
+--- a/src/pages/admin/Dashboard.jsx
++++ b/src/pages/admin/Dashboard.jsx
+@@ -1,11 +1,14 @@
+ import React, { useEffect, useState } from "react";
+ import { useNavigate } from "react-router-dom";
+ import { supabase } from "../../lib/supabaseClient";
++import { useAuth } from "../../context/AuthContext.jsx";
++import AnnounceStrip from "../../components/AnnounceStrip.jsx";
+ import ReportSummary from "../../components/ReportSummary.jsx";
+ import { ReleasedPieCard } from "../../components/ReleasedPie.jsx";
+ 
+ export default function AdminDashboard() {
+   const navigate = useNavigate();
++  const { profile } = useAuth();
+   const [stats, setStats] = useState(null);
+   const [recentAssistance, setRecentAssistance] = useState([]);
+   const [announcements, setAnnouncements] = useState([]);
+@@ -28,19 +31,7 @@ export default function AdminDashboard() {
+ 
+   return (
+     <section>
+-      {announcements.length > 0 && (
+-        <div className="announce-top-strip">
+-          {announcements.map((a) => (
+-            <div className="announce-top-card" key={a.id}>
+-              <i className={`fa-solid ${a.icon || "fa-bullhorn"}`}></i>
+-              <div>
+-                <div className="announce-top-head"><b>{a.title}</b><span>{new Date(a.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</span></div>
+-                <p>{a.body}</p>
+-              </div>
+-            </div>
+-          ))}
+-        </div>
+-      )}
++      <AnnounceStrip announcements={announcements} userId={profile?.id} />
+       <div className="welcome-panel">
+         <span className="eyebrow">Barangay Lindaban · Municipal Agriculture Office</span>
+         <h1>Welcome, Agricultural Personnel</h1>
+diff --git a/src/pages/farmer/Dashboard.jsx b/src/pages/farmer/Dashboard.jsx
+index 4adb058..45744b8 100644
+--- a/src/pages/farmer/Dashboard.jsx
++++ b/src/pages/farmer/Dashboard.jsx
+@@ -1,6 +1,7 @@
+ import React, { useEffect, useState } from "react";
+ import { useNavigate } from "react-router-dom";
+ import { supabase } from "../../lib/supabaseClient";
++import AnnounceStrip from "../../components/AnnounceStrip.jsx";
+ import { useAuth } from "../../context/AuthContext.jsx";
+ import { formatPeso } from "../../lib/businessRules";
+ import { ReleasedPieCard } from "../../components/ReleasedPie.jsx";
+@@ -36,19 +37,7 @@ export default function FarmerDashboard() {
+ 
+   return (
+     <section>
+-      {announcements.length > 0 && (
+-        <div className="announce-top-strip">
+-          {announcements.map((a) => (
+-            <div className="announce-top-card" key={a.id}>
+-              <i className={`fa-solid ${a.icon || "fa-bullhorn"}`}></i>
+-              <div>
+-                <div className="announce-top-head"><b>{a.title}</b><span>{new Date(a.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</span></div>
+-                <p>{a.body}</p>
+-              </div>
+-            </div>
+-          ))}
+-        </div>
+-      )}
++      <AnnounceStrip announcements={announcements} userId={profile?.id} />
+ 
+       <div className="welcome-card">
+         <div className="welcome-text">
+diff --git a/src/pages/president/Dashboard.jsx b/src/pages/president/Dashboard.jsx
+index fad25ac..cef73de 100644
+--- a/src/pages/president/Dashboard.jsx
++++ b/src/pages/president/Dashboard.jsx
+@@ -1,5 +1,6 @@
+ import React, { useEffect, useState } from "react";
+ import { supabase } from "../../lib/supabaseClient";
++import AnnounceStrip from "../../components/AnnounceStrip.jsx";
+ import ReportSummary from "../../components/ReportSummary.jsx";
+ import { ReleasedPieCard } from "../../components/ReleasedPie.jsx";
+ import { useAuth } from "../../context/AuthContext.jsx";
+@@ -27,19 +28,7 @@ export default function PresidentDashboard() {
+ 
+   return (
+     <section>
+-      {announcements.length > 0 && (
+-        <div className="announce-top-strip">
+-          {announcements.map((a) => (
+-            <div className="announce-top-card" key={a.id}>
+-              <i className={`fa-solid ${a.icon || "fa-bullhorn"}`}></i>
+-              <div>
+-                <div className="announce-top-head"><b>{a.title}</b><span>{new Date(a.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</span></div>
+-                <p>{a.body}</p>
+-              </div>
+-            </div>
+-          ))}
+-        </div>
+-      )}
++      <AnnounceStrip announcements={announcements} userId={profile?.id} />
+       <div className="welcome-panel">
+         <span className="eyebrow">Association Leadership</span>
+         <h1>Welcome, {profile?.full_name?.split(" ")[0]}</h1>

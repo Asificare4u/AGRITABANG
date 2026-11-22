@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabaseClient";
+import AnnounceStrip from "../../components/AnnounceStrip.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { formatPeso } from "../../lib/businessRules";
 import { ReleasedPieCard } from "../../components/ReleasedPie.jsx";
@@ -36,19 +37,7 @@ export default function FarmerDashboard() {
 
   return (
     <section>
-      {announcements.length > 0 && (
-        <div className="announce-top-strip">
-          {announcements.map((a) => (
-            <div className="announce-top-card" key={a.id}>
-              <i className={`fa-solid ${a.icon || "fa-bullhorn"}`}></i>
-              <div>
-                <div className="announce-top-head"><b>{a.title}</b><span>{new Date(a.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</span></div>
-                <p>{a.body}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <AnnounceStrip announcements={announcements} userId={profile?.id} />
 
       <div className="welcome-card">
         <div className="welcome-text">

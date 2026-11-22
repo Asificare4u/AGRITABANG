@@ -16,6 +16,7 @@ export default function Meetings() {
   const [form, setForm] = useState(empty);
   const [attendanceRow, setAttendanceRow] = useState(null);
   const [attendance, setAttendance] = useState({});
+  const [attSearch, setAttSearch] = useState(""); // name search inside the attendance sheet
 
   async function load() {
     const [{ data }, { data: assoc }, { data: dir }] = await Promise.all([
@@ -51,6 +52,7 @@ export default function Meetings() {
 
   async function openAttendance(meeting) {
     setAttendanceRow(meeting);
+    setAttSearch("");
     const { data } = await supabase.from("attendance").select("*").eq("meeting_id", meeting.id);
     setAttendance(Object.fromEntries((data || []).map((a) => [a.farmer_id, a.present])));
   }
@@ -65,6 +67,10 @@ export default function Meetings() {
     ? (attendanceRow.association_id ? members.filter((m) => m.association_name === assocName(attendanceRow.association_id)) : members.filter((m) => m.association_name))
     : [];
   const presentCount = membersForMeeting.filter((m) => attendance[m.id]).length;
+  // every word typed must appear in the name, in any order ("juan cruz" finds "Cruz, Juan")
+  const words = attSearch.toLowerCase().split(/\s+/).filter(Boolean);
+  const matchesSearch = (m) => { const n = (m.full_name || "").toLowerCase(); return words.every((w) => n.includes(w)); };
+  const shownCount = membersForMeeting.filter(matchesSearch).length;
 
   return (
     <section>
@@ -107,7 +113,11 @@ export default function Meetings() {
 
       <Modal open={!!attendanceRow} onClose={() => setAttendanceRow(null)} title={`Attendance — ${attendanceRow?.title || ""}`} icon="fa-clipboard-user" wide>
         <div className="modal-body">
-          <div className="no-print" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+          <div className="no-print" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+            <label className="table-search" style={{ flex: "1 1 220px", maxWidth: 360 }}>
+              <i className="fa-solid fa-magnifying-glass"></i>
+              <input type="search" value={attSearch} onChange={(e) => setAttSearch(e.target.value)} placeholder="Search a farmer's name…" aria-label="Search a farmer's name" />
+            </label>
             <button className="btn-ghost" onClick={() => window.print()}><i className="fa-solid fa-print"></i> Print</button>
           </div>
           <div className="print-only print-report-header">
@@ -115,13 +125,14 @@ export default function Meetings() {
             <p>{attendanceRow?.title} &middot; {attendanceRow?.meeting_date} &middot; {attendanceRow?.location}</p>
             <p>{attendanceRow ? assocName(attendanceRow.association_id) : ""}</p>
           </div>
-          <p className="hint-text no-print">{presentCount} of {membersForMeeting.length} marked present.</p>
+          <p className="hint-text no-print">{presentCount} of {membersForMeeting.length} marked present.{words.length > 0 && ` Showing ${shownCount} matching “${attSearch.trim()}”.`}</p>
           {membersForMeeting.length === 0 && <p className="hint-text">No members found.</p>}
+          {membersForMeeting.length > 0 && shownCount === 0 && <p className="hint-text no-print">No farmer matches “{attSearch.trim()}”.</p>}
           <table className="data-table print-table">
             <thead><tr><th>Farmer</th><th style={{ width: 200 }}>Attendance</th></tr></thead>
             <tbody>
               {membersForMeeting.map((m) => (
-                <tr key={m.id}>
+                <tr key={m.id} className={matchesSearch(m) ? "" : "search-hidden"}>
                   <td>{m.full_name}</td>
                   <td>
                     <span className="no-print" style={{ display: "flex", gap: 6 }}>

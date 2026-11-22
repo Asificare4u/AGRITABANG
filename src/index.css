@@ -307,7 +307,13 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
 /* ---- Announcement cards ---- */
 .announce-list,.announce-grid{display:flex;flex-direction:column;gap:12px;}
-.announce-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));}
+/* Announcements page (admin, farmer, president): one wide, roomy card per row, stacked top to bottom */
+.announce-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;}
+.announce-grid > .panel{width:100%;min-height:150px;padding:22px 28px;}
+.announce-grid > .panel .panel-head h3{font-size:1.1rem;line-height:1.35;}
+.announce-grid > .panel p{font-size:.95rem !important;line-height:1.65;}
+.announce-grid > .panel .aa-meta{margin-bottom:10px;}
+@media (max-width:600px){.announce-grid > .panel{padding:16px 18px;min-height:0;}}
 .announce-card{
   display:flex;gap:14px;
   background:var(--white);
@@ -808,6 +814,14 @@ body.dark .theme-toggle{color:var(--gold-light);}
 .announce-top-head span{font-size:.72rem;color:var(--ink-soft);white-space:nowrap;}
 .announce-top-card p{margin:4px 0 0;font-size:.82rem;color:var(--ink-soft);}
 
+.announce-top-title{display:flex;align-items:center;gap:8px;margin:0 0 -2px 2px;color:var(--forest-deep);font-family:var(--font-display);font-size:.95rem;font-weight:700;}
+.announce-top-title i{font-size:.85rem;color:var(--gold);}
+/* small X on the LEFT of each dashboard notification card: hides it here, it stays in the bell */
+.announce-x{flex-shrink:0;width:22px;height:22px;margin-top:1px;padding:0;display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:transparent;color:var(--ink-soft);font-size:.8rem;line-height:1;cursor:pointer;transition:background .15s,color .15s;}
+.announce-x:hover{background:rgba(0,0,0,.08);color:var(--forest-deep);}
+.announce-x:focus-visible{outline:2px solid var(--forest);outline-offset:1px;}
+body.dark .announce-x:hover{background:rgba(255,255,255,.14);}
+
 /* ---- Centered profile layout ---- */
 .profile-center-wrap{max-width:640px;margin:0 auto;}
 .profile-center-header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:8px 4px 18px;}
@@ -1023,3 +1037,7 @@ body.dark .al-badge.act{background:#32284A;color:#C9B5EE;}
 /* Login: hide the scrollbar on the white card (it still scrolls on very small screens) */
 .login-card{scrollbar-width:none;-ms-overflow-style:none;}
 .login-card::-webkit-scrollbar{display:none;width:0;height:0;}
+
+/* attendance search: rows that do not match are hidden on screen, but the printed sheet still lists everyone */
+.search-hidden{display:none;}
+@media print{.search-hidden{display:table-row !important;}}

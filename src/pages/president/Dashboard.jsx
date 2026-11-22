@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import AnnounceStrip from "../../components/AnnounceStrip.jsx";
 import ReportSummary from "../../components/ReportSummary.jsx";
 import { ReleasedPieCard } from "../../components/ReleasedPie.jsx";
 import { useAuth } from "../../context/AuthContext.jsx";
@@ -27,19 +28,7 @@ export default function PresidentDashboard() {
 
   return (
     <section>
-      {announcements.length > 0 && (
-        <div className="announce-top-strip">
-          {announcements.map((a) => (
-            <div className="announce-top-card" key={a.id}>
-              <i className={`fa-solid ${a.icon || "fa-bullhorn"}`}></i>
-              <div>
-                <div className="announce-top-head"><b>{a.title}</b><span>{new Date(a.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" })}</span></div>
-                <p>{a.body}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <AnnounceStrip announcements={announcements} userId={profile?.id} />
       <div className="welcome-panel">
         <span className="eyebrow">Association Leadership</span>
         <h1>Welcome, {profile?.full_name?.split(" ")[0]}</h1>
