@@ -22,6 +22,7 @@ export default function AdminRequests() {
   useEffect(() => { load(); }, []);
 
   async function decide(id, status) {
+    if (!confirm(`Are you sure you want to ${status === "Verified" ? "verify" : "reject"} this crop change request?\n\nThe farmer's crops will ${status === "Verified" ? "be updated" : "stay as they are"}.`)) return;
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("crop_change_requests").update({ status, reviewed_by: user?.id, reviewed_at: new Date().toISOString() }).eq("id", id);
     if (error) return showToast(error.message, "fa-triangle-exclamation");
@@ -30,6 +31,7 @@ export default function AdminRequests() {
   }
 
   async function decideLegacy(id, decision) {
+    if (!confirm(`Are you sure you want to ${decision === "Approved" ? "approve" : "reject"} this request?`)) return;
     const { error } = await supabase.from("profile_update_requests").update({ admin_status: decision, admin_at: new Date().toISOString() }).eq("id", id);
     if (error) return showToast(error.message, "fa-triangle-exclamation");
     showToast(`Request ${decision.toLowerCase()}.`, "fa-user-shield");

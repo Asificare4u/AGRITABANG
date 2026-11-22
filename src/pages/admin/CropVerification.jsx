@@ -61,6 +61,9 @@ export default function CropVerification({ onOpenForm } = {}) {
 
   async function setStatus(row, status) {
     let remarks = null;
+    if (status === "Verified") {
+      if (!confirm(`Are you sure you want to verify ${names[row.farmer_id] || "this farmer"}'s ${row.crop_name} registration?\n\nThe farmer will be notified, and once verified it cannot be rejected.`)) return;
+    }
     if (status === "Rejected") {
       remarks = prompt(`Reason for rejecting ${names[row.farmer_id] || "this farmer"}'s ${row.crop_name} registration (the farmer will see this):`);
       if (remarks === null) return;
@@ -91,7 +94,7 @@ export default function CropVerification({ onOpenForm } = {}) {
           </select>
         </div>
       </div>
-      <p className="hint-text"><i className="fa-solid fa-circle-info"></i> When a farmer registers a new crop it waits here (waiting crops are listed first). Verify it to count toward their assistance eligibility — they are notified automatically (and told straight away if they now qualify for posted assistance). Every registration stays in this list as a record — Verified and Rejected crops remain here, and you can still change a decision.</p>
+      <p className="hint-text"><i className="fa-solid fa-circle-info"></i> When a farmer registers a new crop it waits here (waiting crops are listed first). Verify it to count toward their assistance eligibility — they are notified automatically (and told straight away if they now qualify for posted assistance). Every registration stays in this list as a record — Verified and Rejected crops remain here. A <b>Verified</b> crop is final and can no longer be rejected.</p>
 
       <div className="table-panel">
         <table className="data-table">
@@ -106,8 +109,9 @@ export default function CropVerification({ onOpenForm } = {}) {
                 <td><StatusBadge status={r.status} />{r.status === "Verified" && r.verified_at && <div style={{ fontSize: ".68rem", color: "var(--ink-soft)", marginTop: 2 }}>Verified {new Date(r.verified_at).toLocaleDateString("en-PH")}</div>}{r.status === "Rejected" && r.remarks && <div style={{ fontSize: ".68rem", color: "var(--ink-soft)", marginTop: 2 }}>{r.remarks}</div>}</td>
                 <td style={{ whiteSpace: "nowrap" }}>
                   {r.pcic_application && <button className="btn-ghost" title="View the PCIC application form" onClick={() => (onOpenForm ? onOpenForm(r.pcic_application) : setViewForm(r.pcic_application))}><i className="fa-solid fa-file-lines"></i></button>}{" "}
+                  {r.status === "Verified" && <span title="A verified crop is final" style={{ fontSize: ".72rem", color: "var(--ink-soft)" }}><i className="fa-solid fa-lock"></i> Final</span>}
                   {r.status !== "Verified" && <button className="btn-primary" style={{ padding: "5px 10px", fontSize: ".72rem" }} disabled={busy === r.id} onClick={() => setStatus(r, "Verified")}><i className="fa-solid fa-circle-check"></i> Verify</button>}{" "}
-                  {r.status !== "Rejected" && <button className="btn-ghost" style={{ padding: "5px 10px", fontSize: ".72rem" }} disabled={busy === r.id} onClick={() => setStatus(r, "Rejected")}><i className="fa-solid fa-circle-xmark"></i> Reject</button>}
+                  {r.status === "Pending" && <button className="btn-ghost" style={{ padding: "5px 10px", fontSize: ".72rem" }} disabled={busy === r.id} onClick={() => setStatus(r, "Rejected")}><i className="fa-solid fa-circle-xmark"></i> Reject</button>}
                 </td>
               </tr>
             ))}

@@ -37,6 +37,10 @@ export default function AdminFarmers() {
   const [quickOpen, setQuickOpen] = useState(false);
   const [quick, setQuick] = useState({ full_name: "", email: "", password: "", contact_number: "", is_member: "no", association_id: "" });
   const [quickBusy, setQuickBusy] = useState(false);
+  // forgot-password token: tokenRow = the farmer, tokenData = the token once it was generated
+  const [tokenRow, setTokenRow] = useState(null);
+  const [tokenData, setTokenData] = useState(null);
+  const [tokenBusy, setTokenBusy] = useState(false);
   // the admin decides who is a member of an association (members can read that association's policies)
   const [assocDraft, setAssocDraft] = useState("");
   const [assocBusy, setAssocBusy] = useState(false);
@@ -90,6 +94,25 @@ export default function AdminFarmers() {
     return rows.filter((r) => fullNameOf(r).toLowerCase().includes(q) || (r.location || "").toLowerCase().includes(q) || (r.rsbsa_number || "").toLowerCase().includes(q));
   }, [rows, search]);
 
+  async function generateToken() {
+    setTokenBusy(true);
+    let data, error;
+    try {
+      ({ data, error } = await supabase.functions.invoke("admin-issue-reset-token", { body: { farmer_id: tokenRow.id } }));
+    } catch (err) { error = err; }
+    setTokenBusy(false);
+    let msg = data?.error;
+    if (!msg && error) { try { msg = (await error.context.json()).error; } catch { msg = error.message; } }
+    if (msg || !data?.token) return showToast(msg || "Could not create the token.", "fa-triangle-exclamation");
+    setTokenData(data);
+    logActivity(`Created a password reset token for ${fullNameOf(tokenRow)}`, "security");
+  }
+  function closeToken() { setTokenRow(null); setTokenData(null); }
+  async function copyToken() {
+    try { await navigator.clipboard.writeText(tokenData.token); showToast("Token copied.", "fa-copy"); }
+    catch { showToast("Could not copy. Please write the token down.", "fa-triangle-exclamation"); }
+  }
+
   async function remove(row) {
     if (!confirm(`Permanently delete ${fullNameOf(row)}'s account? This cannot be undone.`)) return;
     const { data, error } = await supabase.functions.invoke("admin-delete-user", { body: { user_id: row.id } });
@@ -136,11 +159,44 @@ export default function AdminFarmers() {
               <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => setDetailRow(f)}><i className="fa-solid fa-eye"></i></button>
               <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => setEnroll({ farmer: f })}><i className="fa-solid fa-pen"></i></button>
               <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => setRsbsaRow(f)}><i className="fa-solid fa-file-lines"></i></button>
+              <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => setTokenRow(f)} title="Forgot password: create a reset token" aria-label="Create password reset token"><i className="fa-solid fa-key"></i></button>
               <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => remove(f)}><i className="fa-solid fa-trash"></i></button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* FORGOT PASSWORD: ONE-TIME RESET TOKEN */}
+      <Modal open={!!tokenRow} onClose={closeToken} title="Password reset token" icon="fa-key">
+        <div className="modal-body">
+          {!tokenData ? (
+            <>
+              <p style={{ fontSize: ".85rem", lineHeight: 1.5 }}>Create a one-time token so <b>{tokenRow ? fullNameOf(tokenRow) : ""}</b> can set a new password.</p>
+              <p className="hint-text"><i className="fa-solid fa-shield-halved"></i> <span>First check that you are really talking to this farmer (a valid ID or their RSBSA number, ideally in person). Anyone with the token can take over the account.</span></p>
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={closeToken}>Cancel</button>
+                <button type="button" className="btn-primary" onClick={generateToken} disabled={tokenBusy}>
+                  {tokenBusy ? <><i className="fa-solid fa-spinner fa-spin"></i> Creating…</> : <><i className="fa-solid fa-key"></i> Generate token</>}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={{ fontSize: ".85rem", lineHeight: 1.5 }}>Give this token to <b>{tokenData.full_name}</b>. It is shown only once.</p>
+              <div className="reset-token-box">{tokenData.token}</div>
+              <ul className="reset-token-notes">
+                <li>Works <b>one time</b> and expires on <b>{new Date(tokenData.expires_at).toLocaleString("en-PH")}</b>.</li>
+                <li>On the login page, the farmer taps <b>Forgot password?</b> and enters the e-mail (<b>{tokenData.email}</b>), this token and a new password.</li>
+                <li>Creating a new token cancels this one. After 5 wrong tries the token locks.</li>
+              </ul>
+              <div className="modal-actions">
+                <button type="button" className="btn-ghost" onClick={copyToken}><i className="fa-solid fa-copy"></i> Copy</button>
+                <button type="button" className="btn-primary" onClick={closeToken}>Done</button>
+              </div>
+            </>
+          )}
+        </div>
+      </Modal>
 
       {/* CREATE ACCOUNT ONLY */}
       <Modal open={quickOpen} onClose={() => setQuickOpen(false)} title="Create farmer account" icon="fa-user-plus">

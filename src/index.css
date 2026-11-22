@@ -1041,3 +1041,10 @@ body.dark .al-badge.act{background:#32284A;color:#C9B5EE;}
 /* attendance search: rows that do not match are hidden on screen, but the printed sheet still lists everyone */
 .search-hidden{display:none;}
 @media print{.search-hidden{display:table-row !important;}}
+
+/* ---- Forgot password (farmer) + reset token (ADMIN) ---- */
+.login-forgot{align-self:flex-start;background:none;border:0;padding:0;color:var(--forest);font:inherit;font-size:.8rem;font-weight:600;text-decoration:underline;cursor:pointer;}
+.login-forgot:hover{color:var(--forest-deep);}
+.reset-token-input{font-family:ui-monospace,Consolas,monospace;letter-spacing:.18em;text-transform:uppercase;}
+.reset-token-box{margin:6px 0 10px;padding:16px;text-align:center;font-family:ui-monospace,Consolas,monospace;font-size:2rem;font-weight:700;letter-spacing:.25em;color:var(--forest-deep);background:var(--sage-pale);border:2px dashed var(--forest);border-radius:12px;user-select:all;}
+.reset-token-notes{margin:0 0 12px;padding-left:18px;font-size:.8rem;line-height:1.55;color:var(--ink-soft);}

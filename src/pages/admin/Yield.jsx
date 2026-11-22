@@ -31,8 +31,8 @@ function ReportTable({ rows, onVerify, onReject, assoc = {} }) {
             <td>
               {r.status === "Pending" && (
                 <>
-                  <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => onVerify(r.id)}><i className="fa-solid fa-check"></i></button>{" "}
-                  <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => onReject(r.id)}><i className="fa-solid fa-xmark"></i></button>
+                  <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => onVerify(r)}><i className="fa-solid fa-check"></i></button>{" "}
+                  <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => onReject(r)}><i className="fa-solid fa-xmark"></i></button>
                 </>
               )}
             </td>
@@ -87,7 +87,10 @@ export default function YieldReports() {
   }
   useEffect(() => { load(); }, []);
 
-  async function setStatus(id, status) {
+  async function setStatus(r, status) {
+    const id = r.id;
+    const what = `${r.farmer_name ? `${r.farmer_name}'s ` : ""}${r.crop_name || "yield"} yield report (${Number(r.quantity).toLocaleString()} ${yieldUnitText(r)})`;
+    if (!confirm(`Are you sure you want to ${status === "Verified" ? "verify" : "reject"} ${what}?`)) return;
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("yield_records").update({ status, verified_by: user?.id }).eq("id", id);
     if (error) return showToast(error.message, "fa-triangle-exclamation");
@@ -95,8 +98,8 @@ export default function YieldReports() {
     showToast(`Yield record marked ${status.toLowerCase()}.`, "fa-wheat-awn");
     load();
   }
-  const onVerify = (id) => setStatus(id, "Verified");
-  const onReject = (id) => setStatus(id, "Rejected");
+  const onVerify = (r) => setStatus(r, "Verified");
+  const onReject = (r) => setStatus(r, "Rejected");
 
   const filteredRows = useMemo(() => {
     if (report === "verified") return rows.filter((r) => r.status === "Verified");

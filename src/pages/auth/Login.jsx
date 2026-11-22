@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabaseClient";
 import LoginAbout from "../../components/LoginAbout.jsx";
 import PasswordField from "../../components/PasswordField.jsx";
 import SavedAccounts from "../../components/SavedAccounts.jsx";
+import ForgotPassword from "../../components/ForgotPassword.jsx";
 import { saveAccount } from "../../lib/savedAccounts";
 
 const ROLE_TABS = [
@@ -23,6 +24,8 @@ export default function Login() {
   const [submitting, setSubmitting] = useState(false);
   const [remember, setRemember] = useState(true);
   const [savedTick, setSavedTick] = useState(0);
+  const [mode, setMode] = useState("login"); // "login" or "reset" (forgot password, Farmer tab only)
+  const [notice, setNotice] = useState("");
 
   if (!loading && session && role) return <Navigate to={`/${role}`} replace />;
 
@@ -87,24 +90,40 @@ export default function Login() {
               key={t.key}
               type="button"
               className={`login-role-tab ${activeTab === t.key ? "active" : ""}`}
-              onClick={() => { setActiveTab(t.key); setEmail(""); setPassword(""); setError(""); }}
+              onClick={() => { setActiveTab(t.key); setEmail(""); setPassword(""); setError(""); setNotice(""); setMode("login"); }}
             >
               <i className={`fa-solid ${t.icon}`}></i> {t.label}
             </button>
           ))}
         </div>
 
-        <SavedAccounts role={activeTab} refreshKey={savedTick} onPick={(a) => { setEmail(a.email); setPassword(""); setError(""); setTimeout(() => document.getElementById("login-password")?.focus(), 0); }} />
+        {notice && mode === "login" && (
+          <p className="hint-text" style={{ color: "var(--forest-deep)", background: "var(--sage-pale)", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}><i className="fa-solid fa-circle-check"></i> {notice}</p>
+        )}
 
-        <form onSubmit={handleSubmit} className="modal-body">
-          <label>Email <input type="email" name="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. renante.salvana@example.com" required /></label>
-          <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} />
-          <label className="remember-row"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember this account on this device</label>
-          {error && <p className="hint-text" style={{ color: "var(--danger)" }}><i className="fa-solid fa-triangle-exclamation"></i> {error}</p>}
-          <button type="submit" className="btn-primary login-submit" disabled={submitting}>
-            {submitting ? <><i className="fa-solid fa-spinner fa-spin"></i> Signing in…</> : <><i className="fa-solid fa-right-to-bracket"></i> Sign In</>}
-          </button>
-        </form>
+        {mode === "reset" && activeTab === "farmer" ? (
+          <ForgotPassword
+            defaultEmail={email}
+            onBack={() => setMode("login")}
+            onDone={(doneEmail) => { setEmail(doneEmail); setPassword(""); setError(""); setNotice("Password changed. Sign in with your new password."); setMode("login"); }}
+          />
+        ) : (
+          <>
+          <SavedAccounts role={activeTab} refreshKey={savedTick} onPick={(a) => { setEmail(a.email); setPassword(""); setError(""); setTimeout(() => document.getElementById("login-password")?.focus(), 0); }} />
+
+          <form onSubmit={handleSubmit} className="modal-body">
+            <label>Email <input type="email" name="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. renante.salvana@example.com" required /></label>
+            <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} />
+            <label className="remember-row"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember this account on this device</label>
+            {activeTab === "farmer" && <button type="button" className="login-forgot" onClick={() => { setError(""); setNotice(""); setMode("reset"); }}>Forgot password?</button>}
+            {error && <p className="hint-text" style={{ color: "var(--danger)" }}><i className="fa-solid fa-triangle-exclamation"></i> {error}</p>}
+            <button type="submit" className="btn-primary login-submit" disabled={submitting}>
+              {submitting ? <><i className="fa-solid fa-spinner fa-spin"></i> Signing in…</> : <><i className="fa-solid fa-right-to-bracket"></i> Sign In</>}
+            </button>
+          </form>
+
+          </>
+        )}
 
         <div className="login-security-note">
           <i className="fa-solid fa-shield-halved"></i>
