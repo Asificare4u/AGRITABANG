@@ -35,11 +35,11 @@ export default function AdminDashboard() {
       <div className="welcome-panel">
         <span className="eyebrow">Barangay Lindaban · Municipal Agriculture Office</span>
         <h1>Welcome, Agricultural Personnel</h1>
-        <p>Overview of registered farmers, recorded yield, and assistance distribution for Barangay Lindaban.</p>
+        <p>Overview of registered farmers, recorded harvest, and assistance distribution for Barangay Lindaban.</p>
       </div>
       <div className="stat-grid">
         <div className="stat-card ring-total"><div className="stat-icon"><i className="fa-solid fa-people-group"></i></div><div className="stat-num">{stats.total_farmers}</div><div className="stat-label">Total Registered Farmers</div></div>
-        <div className="stat-card ring-pending"><div className="stat-icon"><i className="fa-solid fa-wheat-awn"></i></div><div className="stat-num">{Number(stats.total_yield_kg).toLocaleString()}</div><div className="stat-label">Total Yield Recorded (kg)</div></div>
+        <div className="stat-card ring-pending"><div className="stat-icon"><i className="fa-solid fa-wheat-awn"></i></div><div className="stat-num">{Number(stats.total_yield_kg).toLocaleString()}</div><div className="stat-label">Total Harvest Recorded (kg)</div></div>
         <div className="stat-card ring-progress"><div className="stat-icon"><i className="fa-solid fa-hand-holding-dollar"></i></div><div className="stat-num">{stats.total_assistance_records}</div><div className="stat-label">Assistance Records</div></div>
         <div className="stat-card ring-resolved"><div className="stat-icon"><i className="fa-solid fa-shield-heart"></i></div><div className="stat-num">{stats.insurance_claims}</div><div className="stat-label">Crop Insurance Claims</div></div>
       </div>

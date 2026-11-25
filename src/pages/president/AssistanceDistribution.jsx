@@ -21,7 +21,7 @@ export default function AssistanceDistribution() {
   const [form, setForm] = useState({ note: "", quantity: "", unit: ASSISTANCE_UNITS[0] });
 
   async function load() {
-    const [{ data }, { data: dir }, { data: crops }, { data: yields }, { data: insurance }, { data: posted }] = await Promise.all([
+    const [{ data }, { data: dir }, { data: crops }, { data: harvests }, { data: insurance }, { data: posted }] = await Promise.all([
       supabase.from("assistance_records").select("*").order("requested_at", { ascending: false }),
       supabase.from("farmer_directory").select("*"),
       supabase.from("crop_registrations").select("farmer_id").eq("status", "Verified"),
@@ -33,7 +33,7 @@ export default function AssistanceDistribution() {
     setRows(data || []);
     setDirectory(Object.fromEntries((dir || []).map((d) => [d.id, d])));
     const cropSet = new Set((crops || []).map((c) => c.farmer_id));
-    const yieldSet = new Set((yields || []).map((y) => y.farmer_id));
+    const yieldSet = new Set((harvests || []).map((y) => y.farmer_id));
     const insSet = new Set((insurance || []).map((i) => i.farmer_id));
     const equipReleased = new Set((data || []).filter((a) => a.assistance_type === "Farming Equipment" && a.status === "Released").map((a) => a.farmer_id));
     const ctx = {};

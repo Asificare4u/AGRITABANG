@@ -11,14 +11,14 @@ const STATUS_COLS = [
   { key: "Denied", label: "Denied" },
 ];
 
-// Dashboard summary of the two reports: Assistance Report + Yield Report (staff dashboards).
+// Dashboard summary of the two reports: Assistance Report + Harvest Report (staff dashboards).
 export default function ReportSummary({ basePath = "/admin" }) {
   const navigate = useNavigate();
   const [assist, setAssist] = useState(null);
-  const [yields, setYields] = useState(null);
+  const [harvests, setYields] = useState(null);
   const scope = useMemberScope(); // president: association members only
   const assistS = useMemo(() => (assist ? assist.filter((r) => inScope(scope, r.farmer_id)) : null), [assist, scope]);
-  const yieldsS = useMemo(() => (yields ? yields.filter((r) => inScope(scope, r.farmer_id)) : null), [yields, scope]);
+  const yieldsS = useMemo(() => (harvests ? harvests.filter((r) => inScope(scope, r.farmer_id)) : null), [harvests, scope]);
 
   useEffect(() => {
     (async () => {
@@ -52,7 +52,7 @@ export default function ReportSummary({ basePath = "/admin" }) {
     return Object.values(by).sort((a, b) => b.kg - a.kg);
   }, [yieldsS]);
 
-  if (!assist || !yields || scope === undefined) return null;
+  if (!assist || !harvests || scope === undefined) return null;
   const sum = (k) => assistRows.reduce((s, r) => s + (r[k] || 0), 0);
   const totalKg = yieldRows.reduce((s, r) => s + r.kg, 0);
   const link = (to) => (e) => { e.preventDefault(); navigate(to); };
@@ -79,13 +79,13 @@ export default function ReportSummary({ basePath = "/admin" }) {
       </div>
 
       <div className="panel">
-        <div className="panel-head"><h3><i className="fa-solid fa-wheat-awn"></i> {tr("Yield Report")}</h3>
+        <div className="panel-head"><h3><i className="fa-solid fa-wheat-awn"></i> {tr("Harvest Report")}</h3>
           <a href="#" className="link-more" onClick={link(basePath === "/admin" ? "/admin/yield" : `${basePath}/reports`)}>{tr("Full report")}</a></div>
         <div className="table-panel no-shadow">
           <table className="data-table compact">
-            <thead><tr><th>{tr("Crop")}</th><th>{tr("Records")}</th><th>{tr("Verified")}</th><th>{tr("Verified yield (kg)")}</th></tr></thead>
+            <thead><tr><th>{tr("Crop")}</th><th>{tr("Records")}</th><th>{tr("Verified")}</th><th>{tr("Verified harvest (kg)")}</th></tr></thead>
             <tbody>
-              {yieldRows.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--ink-soft)" }}>{tr("No yield records yet.")}</td></tr>}
+              {yieldRows.length === 0 && <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--ink-soft)" }}>{tr("No harvest records yet.")}</td></tr>}
               {yieldRows.map((r) => (
                 <tr key={r.crop}><td>{r.crop}</td><td>{r.records}</td><td>{r.verified}</td><td><b>{Math.round(r.kg).toLocaleString()}</b></td></tr>
               ))}

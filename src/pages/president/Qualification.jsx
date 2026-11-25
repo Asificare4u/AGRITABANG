@@ -16,7 +16,7 @@ export default function Qualification() {
   useEffect(() => {
     if (!selected) { setCtx(null); return; }
     (async () => {
-      const [{ data: crops }, { data: yields }, { data: insurance }, { data: assistance }] = await Promise.all([
+      const [{ data: crops }, { data: harvests }, { data: insurance }, { data: assistance }] = await Promise.all([
         supabase.from("crop_registrations").select("id").eq("farmer_id", selected).eq("status", "Verified"),
         supabase.from("yield_records").select("id").eq("farmer_id", selected).eq("status", "Verified"),
         supabase.from("insurance_registrations").select("id").eq("farmer_id", selected),
@@ -24,7 +24,7 @@ export default function Qualification() {
       ]);
       setCtx({
         hasCropRegistered: (crops || []).length > 0,
-        hasVerifiedYield: (yields || []).length > 0,
+        hasVerifiedYield: (harvests || []).length > 0,
         hasInsuranceRegistered: (insurance || []).length > 0,
         hasEquipmentAlready: (assistance || []).some((a) => a.assistance_type === "Farming Equipment" && a.status === "Released"),
       });

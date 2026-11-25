@@ -5,7 +5,7 @@ import { yieldUnitText } from "../lib/businessRules";
 import { tr } from "../lib/i18n";
 import { useMemberScope, inScope } from "../lib/memberScope";
 
-// The Yield Report that sits inside the Assistance Report (shares its farmer / date filters).
+// The Harvest Report that sits inside the Assistance Report (shares its farmer / date filters).
 export default function YieldReportSection({ farmer = "All", dateFrom = "", dateTo = "" }) {
   const [rows, setRows] = useState([]);
   const scope = useMemberScope(); // president: association members only
@@ -30,12 +30,12 @@ export default function YieldReportSection({ farmer = "All", dateFrom = "", date
 
   return (
     <div className="yield-report-section" style={{ marginTop: 26 }}>
-      <div className="view-head" style={{ marginBottom: 8 }}><h2 style={{ fontSize: "1.1rem" }}><i className="fa-solid fa-wheat-awn"></i> {tr("Yield Report")}</h2></div>
+      <div className="view-head" style={{ marginBottom: 8 }}><h2 style={{ fontSize: "1.1rem" }}><i className="fa-solid fa-wheat-awn"></i> {tr("Harvest Report")}</h2></div>
       <div className="table-panel">
         <table className="data-table print-table">
-          <thead><tr><th>{tr("Farmer")}</th><th>{tr("Crop")}</th><th>{tr("Season")}</th><th>{tr("Yield")}</th><th>{tr("kg-equivalent")}</th><th>{tr("Harvest Date")}</th><th>{tr("Status")}</th></tr></thead>
+          <thead><tr><th>{tr("Farmer")}</th><th>{tr("Crop")}</th><th>{tr("Season")}</th><th>{tr("Harvest")}</th><th>{tr("kg-equivalent")}</th><th>{tr("Harvest Date")}</th><th>{tr("Status")}</th></tr></thead>
           <tbody>
-            {filtered.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--ink-soft)" }}>{tr("No yield records match.")}</td></tr>}
+            {filtered.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--ink-soft)" }}>{tr("No harvest records match.")}</td></tr>}
             {filtered.map((r) => (
               <tr key={r.id}>
                 <td>{r.farmer_name}</td><td>{r.crop_name}</td><td>{r.season}</td>
@@ -47,7 +47,7 @@ export default function YieldReportSection({ farmer = "All", dateFrom = "", date
         </table>
       </div>
       <p className="hint-text" style={{ marginTop: 8 }}>
-        {filtered.length} {tr("yield record")}{filtered.length === 1 ? "" : "s"} · <b>{Math.round(verifiedKg).toLocaleString()} {tr("kg")}</b> {tr("verified")}
+        {filtered.length} {tr("harvest record")}{filtered.length === 1 ? "" : "s"} · <b>{Math.round(verifiedKg).toLocaleString()} {tr("kg")}</b> {tr("verified")}
         {byCrop.length > 0 && <> ({byCrop.map(([c, kg]) => `${c} ${Math.round(kg).toLocaleString()} kg`).join(" · ")})</>}
       </p>
     </div>

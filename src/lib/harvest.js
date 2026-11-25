@@ -1,5 +1,5 @@
 // The "date of harvest" a farmer enters in the Crop Registration (PCIC form, item B.8) is saved with the crop as
-// cropping_schedule = "<sowing date> to <harvest date>". The Yield report reads it from there, so the farmer
+// cropping_schedule = "<sowing date> to <harvest date>". The Harvest report reads it from there, so the farmer
 // does not have to type the harvest date again.
 export function registeredHarvestDate(reg) {
   const m = /(\d{4}-\d{2}-\d{2})\s*$/.exec(reg?.cropping_schedule || "");

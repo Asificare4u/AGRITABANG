@@ -10,7 +10,7 @@ export const NAV = {
     { to: "/farmer/announcements", label: "Announcements", icon: "fa-bullhorn" },
     { to: "/farmer/profile", label: "My Profile", icon: "fa-id-card" },
     { to: "/farmer/crops", label: "Crop Registration", icon: "fa-tractor" },
-    { to: "/farmer/yield", label: "My Yield Records", icon: "fa-wheat-awn" },
+    { to: "/farmer/yield", label: "My Harvest Records", icon: "fa-wheat-awn" },
     {
       group: "Assistance Programs", icon: "fa-list-check",
       items: [
@@ -33,7 +33,7 @@ export const NAV = {
       items: [
         { to: "/admin/insurance", label: "Crop Insurance Reports" },
         { to: "/admin/reports", label: "Assistance Reports" },
-        { to: "/admin/yield", label: "Yield Reports" },
+        { to: "/admin/yield", label: "Harvest Reports" },
       ],
     },
     { to: "/admin/crops", label: "Crop Approval", icon: "fa-seedling" },

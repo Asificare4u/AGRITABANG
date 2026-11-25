@@ -31,7 +31,7 @@ export default function LoginAbout() {
       </p>
       <ul className="about-points">
         <li><i className="fa-solid fa-id-card"></i> Farmer profiling</li>
-        <li><i className="fa-solid fa-seedling"></i> Crops &amp; yield records</li>
+        <li><i className="fa-solid fa-seedling"></i> Crops &amp; harvest records</li>
         <li><i className="fa-solid fa-hand-holding-dollar"></i> Fair assistance</li>
       </ul>
 

@@ -20,7 +20,7 @@ export default function FarmerEligibility() {
 
   async function load() {
     if (!farmer?.id) return;
-    const [{ data: dir }, { data: crops }, { data: yields }, { data: insurance }, { data: assistance }, { data: ann }] = await Promise.all([
+    const [{ data: dir }, { data: crops }, { data: harvests }, { data: insurance }, { data: assistance }, { data: ann }] = await Promise.all([
       supabase.from("farmer_directory").select("*").eq("id", farmer.id).single(),
       supabase.from("crop_registrations").select("id").eq("farmer_id", farmer.id).eq("status", "Verified"),
       supabase.from("yield_records").select("id").eq("farmer_id", farmer.id).eq("status", "Verified"),
@@ -34,7 +34,7 @@ export default function FarmerEligibility() {
     setApplied((assistance || []).filter((a) => a.announcement_id));
     setCtx({
       hasCropRegistered: (crops || []).length > 0,
-      hasVerifiedYield: (yields || []).length > 0,
+      hasVerifiedYield: (harvests || []).length > 0,
       hasInsuranceRegistered: (insurance || []).length > 0,
       hasEquipmentAlready: (assistance || []).some((a) => a.assistance_type === "Farming Equipment" && a.status === "Released"),
     });

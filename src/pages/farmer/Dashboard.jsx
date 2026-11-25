@@ -44,12 +44,12 @@ export default function FarmerDashboard() {
           <span className="eyebrow">{tr("Barangay Lindaban · Registered Farmer")}</span>
           <h1>{tr("Welcome,")} {profile?.full_name?.split(" ")[0] || "Farmer"}!</h1>
           <p>{tr("Track your farm profile, harvest records, and assistance received from the Municipal Agriculture Office.")}</p>
-          <button className="btn-gold" onClick={() => navigate("/farmer/yield")}><i className="fa-solid fa-plus"></i> {tr("Report New Yield")}</button>
+          <button className="btn-gold" onClick={() => navigate("/farmer/yield")}><i className="fa-solid fa-plus"></i> {tr("Report New Harvest")}</button>
         </div>
       </div>
 
       <div className="stat-grid">
-        <div className="stat-card ring-total"><div className="stat-icon"><i className="fa-solid fa-wheat-awn"></i></div><div className="stat-num">{stats.totalYield.toLocaleString()}</div><div className="stat-label">{tr("Verified Yield (kg)")}</div></div>
+        <div className="stat-card ring-total"><div className="stat-icon"><i className="fa-solid fa-wheat-awn"></i></div><div className="stat-num">{stats.totalYield.toLocaleString()}</div><div className="stat-label">{tr("Verified Harvest (kg)")}</div></div>
         <div className="stat-card ring-progress"><div className="stat-icon"><i className="fa-solid fa-hand-holding-dollar"></i></div><div className="stat-num">{stats.assistanceCount}</div><div className="stat-label">{tr("Assistance Records")}</div></div>
         <div className="stat-card ring-pending"><div className="stat-icon"><i className="fa-solid fa-hourglass-half"></i></div><div className="stat-num">{stats.pendingCount}</div><div className="stat-label">{tr("Pending Applications")}</div></div>
         <div className="stat-card ring-resolved"><div className="stat-icon"><i className="fa-solid fa-shield-heart"></i></div><div className="stat-num">{stats.insuranceCount}</div><div className="stat-label">{tr("Crops Insured")}</div></div>
