@@ -77,7 +77,7 @@ export default function Reports({ title = "Assistance Reports" }) {
           <h2><i className="fa-solid fa-file-invoice"></i> {title}</h2>
           <button className="btn-primary" onClick={() => window.print()}><i className="fa-solid fa-print"></i> Print</button>
         </div>
-        <p className="hint-text"><i className="fa-solid fa-circle-info"></i> A plain, printable record of assistance distribution and the yield report. Filter below, then Print for a physical or PDF copy.</p>
+        <p className="hint-text"><i className="fa-solid fa-circle-info"></i> A plain, printable record of assistance distribution and the harvest report. Filter below, then Print for a physical or PDF copy.</p>
 
         <div className="panel" style={{ marginBottom: 18 }}>
           <div className="panel-head"><h3>Filters</h3><button className="btn-ghost" onClick={clearFilters}>Clear</button></div>

@@ -1,11 +1,12 @@
 import React from "react";
 import { formatPeso } from "../lib/businessRules";
 import { claimNo, causeText } from "../lib/insuranceClaim";
+import { photoLines } from "../lib/photoMeta";
 
 const fmtDate = (d) => (d ? new Date(`${String(d).slice(0, 10)}T00:00:00`).toLocaleDateString("en-PH", { month: "long", day: "numeric", year: "numeric" }) : "—");
 
 // The printable "Crop Insurance Claim Application" (one page).
-export function ClaimPaper({ claim, policy, info }) {
+export function ClaimPaper({ claim, policy, info, photos = [] }) {
   const comp = claim.computation || {};
   const decided = claim.status !== "Pending";
   const pct = claim.status === "Approved" ? claim.final_damage_percentage : claim.damage_percentage;
@@ -59,18 +60,42 @@ export function ClaimPaper({ claim, policy, info }) {
         <tr><th>Remarks</th><td colSpan={3}>{claim.admin_remarks || ""}</td></tr>
       </tbody></table>
       <div className="claim-sign"><div><span></span>Inspected by (MAO)</div><div><span></span>Approved by (MAO head)</div></div>
+
+      {photos.length > 0 && (
+        <>
+          <h2 style={{ marginTop: 16 }}>G. Photo evidence ({photos.length})</h2>
+          <div className="claim-photos-print">
+            {photos.map((p, i) => {
+              const l = photoLines(p);
+              return (
+                <figure key={p.id}>
+                  {p.url && <img src={p.url} alt={`Evidence ${i + 1}`} />}
+                  <figcaption>
+                    <b>Photo {i + 1}</b><br />
+                    Taken: {l.taken}<br />
+                    Location: {l.location}<br />
+                    Camera: {l.camera}<br />
+                    Uploaded: {l.uploaded}<br />
+                    File ID: {l.fingerprint}
+                  </figcaption>
+                </figure>
+              );
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-export default function ClaimView({ claim, policy, info, onBack }) {
+export default function ClaimView({ claim, policy, info, photos, onBack }) {
   return (
     <section>
       <div className="no-print claim-bar">
         <button className="btn-ghost" onClick={onBack}>← Back</button>
         <button className="btn-primary" onClick={() => window.print()}><i className="fa-solid fa-print"></i> Print</button>
       </div>
-      <ClaimPaper claim={claim} policy={policy} info={info} />
+      <ClaimPaper claim={claim} policy={policy} info={info} photos={photos} />
     </section>
   );
 }

@@ -102,7 +102,8 @@ export default function AdminFarmers() {
     } catch (err) { error = err; }
     setTokenBusy(false);
     let msg = data?.error;
-    if (!msg && error) { try { msg = (await error.context.json()).error; } catch { msg = error.message; } }
+    if (!msg && error) { try { const j = await error.context.json(); msg = j.error || j.message; } catch { /* not a JSON reply */ } if (!msg) msg = error.message; }
+    if (/not found|failed to send|invalid jwt|non-2xx/i.test(msg || "")) msg = "The token service is not set up yet: run the SQL file and deploy the two reset functions in Supabase.";
     if (msg || !data?.token) return showToast(msg || "Could not create the token.", "fa-triangle-exclamation");
     setTokenData(data);
     logActivity(`Created a password reset token for ${fullNameOf(tokenRow)}`, "security");
@@ -154,7 +155,7 @@ export default function AdminFarmers() {
             <h4>{fullNameOf(f)}</h4>
             <p className="f-loc">{f.barangay || f.location || "—"}</p>
             <p style={{ fontSize: ".72rem", color: "var(--ink-soft)" }}>{f.rsbsa_number ? `RSBSA# ${f.rsbsa_number}` : "No RSBSA number yet"}</p>
-            <p style={{ fontSize: ".72rem", margin: "6px 0" }}><b>{Number(f.total_verified_yield).toLocaleString()} kg</b> verified yield</p>
+            <p style={{ fontSize: ".72rem", margin: "6px 0" }}><b>{Number(f.total_verified_yield).toLocaleString()} kg</b> verified harvest</p>
             <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
               <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => setDetailRow(f)}><i className="fa-solid fa-eye"></i></button>
               <button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => setEnroll({ farmer: f })}><i className="fa-solid fa-pen"></i></button>
@@ -241,7 +242,7 @@ export default function AdminFarmers() {
               <li><span>Crops</span><b>{(detailRow.crops || []).join(", ") || "—"}</b></li>
               <li><span>Total Parcel Area</span><b>{detailRow.farm_size ? `${detailRow.farm_size} ha` : "—"}</b></li>
               <li><span>Association</span><b>{detailRow.association_name || "Not a member"}</b></li>
-              <li><span>Total Verified Yield</span><b>{Number(detailRow.total_verified_yield).toLocaleString()} kg</b></li>
+              <li><span>Total Verified Harvest</span><b>{Number(detailRow.total_verified_yield).toLocaleString()} kg</b></li>
               <li><span>Consent on File</span><b>{detailRow.consent_given ? `Yes (${detailRow.consent_date})` : "Not yet recorded"}</b></li>
             </ul>
             <div className="rsbsa-subhead"><span>Association membership</span></div>

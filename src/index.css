@@ -1072,3 +1072,33 @@ body.dark .al-badge.act{background:#32284A;color:#C9B5EE;}
   .claim-paper h2{break-after:avoid;}
   .claim-table,.claim-sign{break-inside:avoid;}
 }
+
+/* signature lines at the bottom of printed admin reports */
+.print-sign{margin-top:36px;}
+.print-sign div{display:inline-block;width:44%;margin-right:6%;text-align:center;font-size:.75rem;vertical-align:top;}
+.print-sign span{display:block;border-bottom:1px solid #111;height:24px;margin-bottom:3px;}
+
+/* ---- photo evidence (claims) ---- */
+.claim-photo-box{border:1px dashed var(--forest);border-radius:12px;padding:12px 14px;background:var(--sage-pale);}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+.photo-card{position:relative;margin:0;background:#fff;border:1px solid rgba(20,83,45,.15);border-radius:10px;overflow:hidden;}
+.photo-card img{display:block;width:100%;height:120px;object-fit:cover;background:#e8efe6;}
+.photo-card figcaption{padding:6px 8px;display:flex;flex-direction:column;gap:3px;font-size:.68rem;color:var(--ink-soft);}
+.photo-card-admin{grid-column:span 1;}
+.photo-card-admin img{height:150px;}
+.photo-card-admin figcaption b{color:var(--ink);font-size:.74rem;}
+.photo-remove{position:absolute;top:5px;right:5px;width:24px;height:24px;border:0;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:.75rem;line-height:1;}
+.photo-remove:hover{background:#b3261e;}
+.photo-add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:150px;border:2px dashed var(--forest);border-radius:10px;background:#fff;color:var(--forest-deep);font-size:.78rem;font-weight:600;cursor:pointer;}
+.photo-add i{font-size:1.4rem;}
+.photo-add:hover{background:var(--sage-pale);}
+.photo-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px;}
+.photo-chip{display:inline-block;padding:2px 7px;border-radius:999px;font-size:.64rem;font-weight:600;line-height:1.35;}
+.photo-chip.ok{background:#dcefe0;color:#14532d;}
+.photo-chip.warn{background:#fbecc8;color:#7a4b00;}
+.photo-missing{height:150px;display:flex;align-items:center;justify-content:center;background:#eee;color:#777;font-size:.75rem;}
+/* printed claim form: evidence */
+.claim-photos-print{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.claim-photos-print figure{margin:0;border:1px solid #444;break-inside:avoid;}
+.claim-photos-print img{display:block;width:100%;height:150px;object-fit:cover;}
+.claim-photos-print figcaption{padding:4px 6px;font-size:.66rem;line-height:1.35;}

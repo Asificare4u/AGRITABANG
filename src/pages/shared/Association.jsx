@@ -118,7 +118,7 @@ function MembershipManagement() {
               <li><span>Location</span><b>{detail.location || "—"}</b></li>
               <li><span>Farm size</span><b>{detail.farm_size ? `${detail.farm_size} ha` : "—"}</b></li>
               <li><span>Crops</span><b>{(detail.crops || []).join(", ") || "—"}</b></li>
-              <li><span>Total verified yield</span><b>{Number(detail.total_verified_yield || 0).toLocaleString()} kg</b></li>
+              <li><span>Total verified harvest</span><b>{Number(detail.total_verified_yield || 0).toLocaleString()} kg</b></li>
             </ul>
             <div className="modal-actions"><button className="btn-primary" onClick={() => setDetail(null)}>Close</button></div>
           </div>

@@ -67,7 +67,7 @@ export default function FarmersProfile() {
             <p className="f-loc">{f.barangay || f.location || "—"}</p>
             <p style={{ fontSize: ".72rem", color: "var(--ink-soft)" }}>{f.rsbsa_number ? `RSBSA# ${f.rsbsa_number}` : "No RSBSA number yet"}</p>
             <p className="f-assoc"><i className="fa-solid fa-flag"></i> {f.association_name || NOT_MEMBER}</p>
-            <p style={{ fontSize: ".72rem", margin: "6px 0" }}><b>{Number(f.total_verified_yield).toLocaleString()} kg</b> verified yield</p>
+            <p style={{ fontSize: ".72rem", margin: "6px 0" }}><b>{Number(f.total_verified_yield).toLocaleString()} kg</b> verified harvest</p>
             <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap" }}>
               <button className="btn-ghost" title="View" aria-label="View farmer" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => setDetailRow(f)}><i className="fa-solid fa-eye"></i></button>
             </div>
@@ -84,7 +84,7 @@ export default function FarmersProfile() {
               <li><span>Association (member of)</span><b>{detailRow.association_name || NOT_MEMBER}</b></li>
               <li><span>Farm Size</span><b>{detailRow.farm_size ? `${detailRow.farm_size} ha` : "—"}</b></li>
               <li><span>Crops Grown</span><b>{(detailRow.crops || []).join(", ") || "—"}</b></li>
-              <li><span>Total Verified Yield</span><b>{Number(detailRow.total_verified_yield).toLocaleString()} kg</b></li>
+              <li><span>Total Verified Harvest</span><b>{Number(detailRow.total_verified_yield).toLocaleString()} kg</b></li>
             </ul>
             <div className="modal-actions"><button className="btn-primary" onClick={() => setDetailRow(null)}>Close</button></div>
           </div>

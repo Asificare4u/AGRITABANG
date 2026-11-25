@@ -6,6 +6,8 @@ import { StatusBadge } from "../../components/Badges.jsx";
 import { computeInsuranceStatus, computeInsuranceBasis, formatPeso } from "../../lib/businessRules";
 import ClaimView from "../../components/ClaimPaper.jsx";
 import { claimEstimate, claimNo, causeText } from "../../lib/insuranceClaim";
+import { loadClaimPhotos } from "../../lib/claimPhotos";
+import { photoLines, photoFlags } from "../../lib/photoMeta";
 
 export default function AdminInsurance() {
   const { showToast } = useToast();
@@ -22,10 +24,11 @@ export default function AdminInsurance() {
   const [review, setReview] = useState(null);     // the claim being reviewed
   const [decision, setDecision] = useState({ pct: "", remarks: "" });
   const [deciding, setDeciding] = useState(false);
-  const [claimView, setClaimView] = useState(null); // print screen
+  const [claimView, setClaimView] = useState(null); // print screen: { claim, photos }
+  const [reviewPhotos, setReviewPhotos] = useState(null); // photo evidence of the claim being reviewed (null = still loading)
 
   async function load() {
-    const [{ data }, { data: dirRows }, { data: prices }, { data: yields }, { data: clm }] = await Promise.all([
+    const [{ data }, { data: dirRows }, { data: prices }, { data: harvests }, { data: clm }] = await Promise.all([
       supabase.from("insurance_registrations").select("*").order("registered_at", { ascending: false }),
       supabase.from("farmer_directory").select("id, full_name, rsbsa_number, house_no_purok, barangay, contact_number"),
       supabase.from("crop_prices").select("*"),
@@ -38,7 +41,7 @@ export default function AdminInsurance() {
     setNames(Object.fromEntries((dirRows || []).map((d) => [d.id, d.full_name])));
     setCropPrices(Object.fromEntries((prices || []).map((p) => [p.crop_name, Number(p.price_per_kg)])));
     const grouped = {};
-    (yields || []).forEach((y) => { (grouped[y.farmer_id] ||= []).push(y); });
+    (harvests || []).forEach((y) => { (grouped[y.farmer_id] ||= []).push(y); });
     setYieldsByFarmer(grouped);
   }
   useEffect(() => { load(); }, []);
@@ -94,7 +97,12 @@ export default function AdminInsurance() {
     const d = dir[farmerId] || {};
     return { name: d.full_name, rsbsa: d.rsbsa_number, contact: d.contact_number, address: [d.house_no_purok, d.barangay || "Lindaban", "Manolo Fortich, Bukidnon"].filter(Boolean).join(", ") };
   }
-  function openReview(c) { setReview(c); setDecision({ pct: String(c.damage_percentage ?? ""), remarks: "" }); }
+  function openReview(c) {
+    setReview(c); setReviewPhotos(null);
+    setDecision({ pct: String(c.damage_percentage ?? ""), remarks: "" });
+    loadClaimPhotos(c.id).then(setReviewPhotos);
+  }
+  async function printClaim(c) { setReview(null); setClaimView({ claim: c, photos: reviewPhotos || (await loadClaimPhotos(c.id)) }); }
   const reviewPolicy = review ? rows.find((r) => r.id === review.insurance_id) : null;
   const reviewEst = review && reviewPolicy ? claimEstimate(reviewPolicy, review.damaged_area, yieldsByFarmer[review.farmer_id] || [], cropPrices, decision.pct) : null;
 
@@ -121,25 +129,33 @@ export default function AdminInsurance() {
   }
 
   if (claimView) {
-    return <ClaimView claim={claimView} policy={rows.find((r) => r.id === claimView.insurance_id)} info={infoFor(claimView.farmer_id)} onBack={() => setClaimView(null)} />;
+    return <ClaimView claim={claimView.claim} photos={claimView.photos} policy={rows.find((r) => r.id === claimView.claim.insurance_id)} info={infoFor(claimView.claim.farmer_id)} onBack={() => setClaimView(null)} />;
   }
 
   const pendingClaims = claims.filter((c) => c.status === "Pending").length;
 
   return (
     <section>
-      <div className="view-head">
-        <h2><i className="fa-solid fa-shield-heart"></i> Crop Insurance Reports</h2>
-        <select className="filter-select" value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option>All</option><option>Active</option><option>Expired</option><option>Pending</option><option>Claimed</option><option>Cancelled</option>
-        </select>
+      <div className="print-only print-report-header">
+        <h1>AgriTabang — Crop Insurance Report</h1>
+        <p>{filter === "All" ? "All policies" : `Policies: ${filter}`} · {filtered.length} polic{filtered.length === 1 ? "y" : "ies"} · {claims.length} claim application{claims.length === 1 ? "" : "s"} ({pendingClaims} waiting)</p>
+        <p>Generated {new Date().toLocaleString("en-PH")}</p>
       </div>
-      <p className="hint-text"><i className="fa-solid fa-circle-info"></i> Every crop insurance record, municipality-wide — including expired policies, kept visible for history and reporting.</p>
+      <div className="view-head no-print">
+        <h2><i className="fa-solid fa-shield-heart"></i> Crop Insurance Reports</h2>
+        <div className="head-actions">
+          <select className="filter-select" value={filter} onChange={(e) => setFilter(e.target.value)}>
+            <option>All</option><option>Active</option><option>Expired</option><option>Pending</option><option>Claimed</option><option>Cancelled</option>
+          </select>
+          <button className="btn-primary" onClick={() => window.print()}><i className="fa-solid fa-print"></i> Print</button>
+        </div>
+      </div>
+      <p className="hint-text no-print"><i className="fa-solid fa-circle-info"></i> Every crop insurance record, municipality-wide — including expired policies, kept visible for history and reporting.</p>
       <h3 style={{ margin: "6px 0 8px", fontSize: "1rem" }}><i className="fa-solid fa-file-invoice-dollar"></i> Claim Applications {pendingClaims > 0 && <span className="status-badge status-pending" style={{ marginLeft: 6 }}>{pendingClaims} waiting</span>}</h3>
-      <p className="hint-text"><i className="fa-solid fa-circle-info"></i> Filed by farmers after a calamity. A claim is paid only for the <b>damaged part</b> of the crop. Review it, confirm the damage after inspecting the farm, then approve or reject.</p>
+      <p className="hint-text no-print"><i className="fa-solid fa-circle-info"></i> Filed by farmers after a calamity. A claim is paid only for the <b>damaged part</b> of the crop. Review it, confirm the damage after inspecting the farm, then approve or reject.</p>
       <div className="table-panel" style={{ marginBottom: 18 }}>
-        <table className="data-table">
-          <thead><tr><th>Claim No.</th><th>Farmer</th><th>Crop</th><th>Calamity</th><th>Date</th><th>Damaged</th><th>Assistance</th><th>Filed</th><th>Status</th><th></th></tr></thead>
+        <table className="data-table print-table">
+          <thead><tr><th>Claim No.</th><th>Farmer</th><th>Crop</th><th>Calamity</th><th>Date</th><th>Damaged</th><th>Assistance</th><th>Filed</th><th>Status</th><th className="no-print"></th></tr></thead>
           <tbody>
             {claims.length === 0 && <tr><td colSpan={10} style={{ textAlign: "center", color: "var(--ink-soft)" }}>No claim applications yet.</td></tr>}
             {claims.map((c) => (
@@ -149,20 +165,21 @@ export default function AdminInsurance() {
                 <td>{c.status === "Approved" ? <b>{formatPeso(c.final_amount)}</b> : c.estimated_amount != null ? `≈ ${formatPeso(c.estimated_amount)}` : "—"}</td>
                 <td>{new Date(c.created_at).toLocaleDateString("en-PH")}</td>
                 <td><StatusBadge status={c.status} /></td>
-                <td><button className="btn-ghost" style={{ padding: "4px 10px", fontSize: ".72rem" }} onClick={() => openReview(c)}><i className="fa-solid fa-eye"></i> {c.status === "Pending" ? "Review" : "View"}</button></td>
+                <td className="no-print"><button className="btn-ghost" style={{ padding: "4px 10px", fontSize: ".72rem" }} onClick={() => openReview(c)}><i className="fa-solid fa-eye"></i> {c.status === "Pending" ? "Review" : "View"}</button></td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <div className="qual-box">
+      <h3 className="print-only" style={{ margin: "14px 0 6px", fontSize: "1rem" }}>Insurance Records</h3>
+      <div className="qual-box no-print">
         <b>New Registration vs. Renewal</b>
         <p style={{ margin: 0 }}>A record is a <b>Renewal</b> whenever the farmer already has any prior record for that same crop (regardless of that prior record's outcome) — this applies to every farmer with history for that crop, not a special member category. A brand-new crop/farmer pairing is a <b>New Registration</b>. The system blocks creating a duplicate while an existing policy for that crop is still Active.</p>
       </div>
       <div className="table-panel">
-        <table className="data-table">
-          <thead><tr><th>Farmer</th><th>Crop / Plant Name</th><th>Area</th><th>Type</th><th>Coverage End</th><th>Source</th><th>Status</th><th></th></tr></thead>
+        <table className="data-table print-table">
+          <thead><tr><th>Farmer</th><th>Crop / Plant Name</th><th>Area</th><th>Type</th><th>Coverage End</th><th>Source</th><th>Status</th><th className="no-print"></th></tr></thead>
           <tbody>
             {filtered.length === 0 && <tr><td colSpan={8} style={{ textAlign: "center", color: "var(--ink-soft)" }}>No records.</td></tr>}
             {filtered.map((r) => (
@@ -171,7 +188,7 @@ export default function AdminInsurance() {
                 <td><StatusBadge status={r.registration_type || "New Registration"} /></td>
                 <td>{r.coverage_end_date || "—"}</td><td>{r.insurance_source}</td>
                 <td><StatusBadge status={computeInsuranceStatus(r)} /></td>
-                <td><button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => setDetailRow(r)}><i className="fa-solid fa-eye"></i></button></td>
+                <td className="no-print"><button className="btn-ghost" style={{ padding: "4px 8px", fontSize: ".7rem" }} onClick={() => setDetailRow(r)}><i className="fa-solid fa-eye"></i></button></td>
               </tr>
             ))}
           </tbody>
@@ -198,7 +215,7 @@ export default function AdminInsurance() {
 
               <p className="rsbsa-subhead">Insurance Calculation Basis</p>
               <div className="qual-box">
-                <p style={{ margin: 0 }}>Crop: {detailRow.crop_name}<br />Farm Area: {detailRow.area} ha<br />Yield used: {basis.yieldBasisNote}<br />Crop Price: ₱{basis.price}/kg<br />Estimated Crop Value: {formatPeso(basis.cropValue)}<br />Coverage Rate: {(basis.coverageRate * 100).toFixed(0)}%</p>
+                <p style={{ margin: 0 }}>Crop: {detailRow.crop_name}<br />Farm Area: {detailRow.area} ha<br />Harvest used: {basis.yieldBasisNote}<br />Crop Price: ₱{basis.price}/kg<br />Estimated Crop Value: {formatPeso(basis.cropValue)}<br />Coverage Rate: {(basis.coverageRate * 100).toFixed(0)}%</p>
               </div>
 
               {basis.damagePct != null ? (
@@ -236,6 +253,8 @@ export default function AdminInsurance() {
         )}
       </Modal>
 
+      <div className="print-only print-sign"><div><span></span>Prepared by</div><div><span></span>Noted by</div></div>
+
       {/* REVIEW A CLAIM */}
       <Modal open={!!review} onClose={() => !deciding && setReview(null)} title={review ? `Claim ${claimNo(review.id)}` : "Claim"} icon="fa-file-invoice-dollar" wide>
         {review && (
@@ -250,6 +269,35 @@ export default function AdminInsurance() {
               <li><span>Filed</span><b>{new Date(review.created_at).toLocaleString("en-PH")}</b></li>
               <li><span>Status</span><b>{review.status}</b></li>
             </ul>
+
+            <p className="rsbsa-subhead"><i className="fa-solid fa-camera"></i> Photo evidence {reviewPhotos ? `(${reviewPhotos.length})` : ""}</p>
+            {reviewPhotos === null && <p className="hint-text">Loading photos…</p>}
+            {reviewPhotos && reviewPhotos.length === 0 && <p className="hint-text" style={{ color: "var(--danger)" }}><i className="fa-solid fa-triangle-exclamation"></i> No photos were attached to this claim, so it cannot be approved.</p>}
+            {reviewPhotos && reviewPhotos.length > 0 && (
+              <>
+                <div className="photo-grid">
+                  {reviewPhotos.map((p, i) => {
+                    const l = photoLines(p);
+                    return (
+                      <figure className="photo-card photo-card-admin" key={p.id}>
+                        {p.url ? <a href={p.url} target="_blank" rel="noreferrer" title="Open the full photo"><img src={p.url} alt={`Evidence ${i + 1}`} /></a> : <div className="photo-missing">Photo unavailable</div>}
+                        <figcaption>
+                          <b>Photo {i + 1}</b>
+                          <span>Taken: {l.taken}</span>
+                          <span>Location: {p.latitude != null ? <a href={`https://www.google.com/maps?q=${p.latitude},${p.longitude}`} target="_blank" rel="noreferrer">{l.location}</a> : l.location}</span>
+                          <span>Camera: {l.camera}</span>
+                          <span>File: {l.file}</span>
+                          <span>Uploaded: {l.uploaded}</span>
+                          <span>File ID: {l.fingerprint}</span>
+                          <span className="photo-chips">{photoFlags(p, review.calamity_date).map((f) => <span key={f.text} className={`photo-chip ${f.tone}`}>{f.text}</span>)}</span>
+                        </figcaption>
+                      </figure>
+                    );
+                  })}
+                </div>
+                <p className="hint-text" style={{ margin: "6px 0 0" }}><i className="fa-solid fa-circle-info"></i> Photos support the inspection; they do not replace it. Warnings only mean "look closer". Photos shared through Messenger or Facebook usually lose their date and location.</p>
+              </>
+            )}
 
             {review.status === "Pending" ? (
               <>
@@ -266,9 +314,9 @@ export default function AdminInsurance() {
                 ) : <p className="hint-text">Enter a damage percentage from 1 to 100 to see the assistance amount.</p>}
                 <label>Remarks <span style={{ color: "var(--ink-soft)", fontWeight: 400 }}>(required when rejecting; the farmer sees it)</span> <textarea rows={2} value={decision.remarks} onChange={(e) => setDecision({ ...decision, remarks: e.target.value })} /></label>
                 <div className="modal-actions">
-                  <button type="button" className="btn-ghost" onClick={() => { const c = review; setReview(null); setClaimView(c); }}><i className="fa-solid fa-print"></i> Print</button>
+                  <button type="button" className="btn-ghost" onClick={() => printClaim(review)}><i className="fa-solid fa-print"></i> Print</button>
                   <button type="button" className="btn-ghost" onClick={() => decide(false)} disabled={deciding}><i className="fa-solid fa-xmark"></i> Reject</button>
-                  <button type="button" className="btn-primary" onClick={() => decide(true)} disabled={deciding}><i className="fa-solid fa-check"></i> {deciding ? "Saving…" : "Approve claim"}</button>
+                  <button type="button" className="btn-primary" onClick={() => decide(true)} disabled={deciding || (reviewPhotos !== null && reviewPhotos.length === 0)}><i className="fa-solid fa-check"></i> {deciding ? "Saving…" : "Approve claim"}</button>
                 </div>
               </>
             ) : (
@@ -283,7 +331,7 @@ export default function AdminInsurance() {
                   </p>
                 </div>
                 <div className="modal-actions">
-                  <button type="button" className="btn-ghost" onClick={() => { const c = review; setReview(null); setClaimView(c); }}><i className="fa-solid fa-print"></i> Print</button>
+                  <button type="button" className="btn-ghost" onClick={() => printClaim(review)}><i className="fa-solid fa-print"></i> Print</button>
                   <button type="button" className="btn-primary" onClick={() => setReview(null)}>Close</button>
                 </div>
               </>

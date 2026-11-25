@@ -25,17 +25,20 @@ export default function ForgotPassword({ defaultEmail = "", onBack, onDone }) {
       }));
     } catch (err) { error = err; }
     setBusy(false);
+    // success ONLY when the function says so; any other reply (not deployed, rejected, wrong token ...) is an error
+    if (data?.ok === true) return onDone(email.trim());
     let msg = data?.error;
     if (!msg && error) {
-      try { msg = (await error.context.json()).error; } catch { msg = error.message; }
+      try { const j = await error.context.json(); msg = j.error || j.message; } catch { /* not a JSON reply */ }
+      if (!msg) msg = error.message;
     }
-    if (msg) return setError(msg);
-    onDone(email.trim());
+    if (/not found|failed to send|invalid jwt|non-2xx/i.test(msg || "")) msg = "The password reset service is not available yet. Please tell the system developer.";
+    setError(msg || "Could not reset the password. Please try again.");
   }
 
   return (
     <form onSubmit={submit} className="modal-body">
-      <p className="hint-text"><i className="fa-solid fa-circle-info"></i> <span>Forgot your password? Go to the Municipal Agriculture Office (ADMIN) and ask for a <b>reset token</b>. Then enter it below with your new password.</span></p>
+      <p className="hint-text"><i className="fa-solid fa-circle-info"></i> <span>Forgot your password? Go to the Municipal Agriculture Office (ADMIN) and ask for a <b>reset token</b>. Then enter it below with your new password. (This is for farmer accounts. ADMIN and Association President accounts must ask the system administrator.)</span></p>
       <label>Email <input type="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. renante.salvana@example.com" required /></label>
       <label>Reset token
         <input

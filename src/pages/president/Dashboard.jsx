@@ -32,7 +32,7 @@ export default function PresidentDashboard() {
       <div className="welcome-panel">
         <span className="eyebrow">Association Leadership</span>
         <h1>Welcome, {profile?.full_name?.split(" ")[0]}</h1>
-        <p>Oversight of association membership, assistance distribution, and yield for Barangay Lindaban.</p>
+        <p>Oversight of association membership, assistance distribution, and harvest for Barangay Lindaban.</p>
       </div>
       <div className="stat-grid">
         <div className="stat-card ring-total"><div className="stat-icon"><i className="fa-solid fa-people-group"></i></div><div className="stat-num">{stats.total_farmers}</div><div className="stat-label">Total Registered Farmers</div></div>

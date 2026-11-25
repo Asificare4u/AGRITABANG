@@ -46,12 +46,12 @@ export function calculateInsuranceCoverage({ crop_name, area }, verifiedYields, 
   }
   const assumedKg = area * ASSUMED_YIELD_PER_HA;
   const value = Math.round(assumedKg * price * INSURANCE_COVERAGE_RATE);
-  return { value, basis: `No verified harvest on file yet — estimated using ${ASSUMED_YIELD_PER_HA.toLocaleString()} kg/ha standard yield × ${area} ha × ₱${price}/kg × ${INSURANCE_COVERAGE_RATE * 100}% coverage` };
+  return { value, basis: `No verified harvest on file yet — estimated using ${ASSUMED_YIELD_PER_HA.toLocaleString()} kg/ha standard harvest × ${area} ha × ₱${price}/kg × ${INSURANCE_COVERAGE_RATE * 100}% coverage` };
 }
 
 export const YIELD_UNITS = ["kg", "Sacks", "Cavans", "Other"];
 export const YIELD_UNIT_LABELS = { kg: "Kilograms (kg)", Sacks: "Sacks", Cavans: "Cavans", Other: "Other" };
-// What to show for a yield record's unit: for "Other" it is the unit the farmer actually specified.
+// What to show for a harvest record's unit: for "Other" it is the unit the farmer actually specified.
 export const yieldUnitText = (r) => (r.unit === "Other" ? (r.unit_other || "Other") : (YIELD_UNIT_LABELS[r.unit] || r.unit));
 
 export const ASSISTANCE_TYPES = ["Cash Aid", "Seeds", "Fertilizer", "Farming Equipment", "Crop Insurance"];
@@ -80,7 +80,7 @@ export function computeInsuranceBasis(record, verifiedYields, cropPrices) {
     yieldBasisNote = `${Math.round(yieldKg).toLocaleString()} kg avg. verified harvest`;
   } else {
     yieldKg = Number(record.area) * ASSUMED_YIELD_PER_HA;
-    yieldBasisNote = `${ASSUMED_YIELD_PER_HA.toLocaleString()} kg/ha assumed standard yield × ${record.area} ha (no verified harvest on file yet)`;
+    yieldBasisNote = `${ASSUMED_YIELD_PER_HA.toLocaleString()} kg/ha assumed standard harvest × ${record.area} ha (no verified harvest on file yet)`;
   }
   const cropValue = yieldKg * price;
   const coverageRate = Number(record.coverage_rate) || INSURANCE_COVERAGE_RATE;
@@ -96,11 +96,11 @@ export function computeInsuranceBasis(record, verifiedYields, cropPrices) {
 }
 
 export const ASSISTANCE_REQUIREMENTS = {
-  "Cash Aid": "Requires an updated profile photo, a registered crop, a farm size on file, and a verified harvest/yield record.",
-  "Seeds": "Requires an updated profile photo, a registered crop, a farm size on file, and a verified harvest/yield record.",
-  "Fertilizer": "Requires an updated profile photo, a registered crop, a farm size on file, and a verified harvest/yield record.",
+  "Cash Aid": "Requires an updated profile photo, a registered crop, a farm size on file, and a verified harvest record.",
+  "Seeds": "Requires an updated profile photo, a registered crop, a farm size on file, and a verified harvest record.",
+  "Fertilizer": "Requires an updated profile photo, a registered crop, a farm size on file, and a verified harvest record.",
   "Farming Equipment": "Requires an updated profile photo, a registered crop, a farm size on file, and active membership in a recognized farmers association. Given once per farmer.",
-  "Crop Insurance": "Requires an updated profile photo, a registered crop, a farm size on file, a verified harvest/yield record, and that the affected crop was registered under Crop Insurance before any damage occurred.",
+  "Crop Insurance": "Requires an updated profile photo, a registered crop, a farm size on file, a verified harvest record, and that the affected crop was registered under Crop Insurance before any damage occurred.",
 };
 
 // Runs the same automatic qualification check for every role.
@@ -117,7 +117,7 @@ export function runQualificationCheck(type, farmer, ctx) {
     checks.push({ label: "Active farmers association member", pass: !!farmer.is_association_member });
     checks.push({ label: "No equipment previously released", pass: !ctx.hasEquipmentAlready });
   } else {
-    checks.push({ label: "Verified harvest/yield record on file", pass: !!ctx.hasVerifiedYield });
+    checks.push({ label: "Verified harvest record on file", pass: !!ctx.hasVerifiedYield });
   }
 
   if (type === "Crop Insurance") {

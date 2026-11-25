@@ -16,7 +16,7 @@ const friendly = (msg) => (/unit_other|kg_per_unit/.test(msg) && /column|schema 
   ? `${msg} — run supabase/migrations/crop_verification_qualified_notify_yield_other.sql in the Supabase SQL editor first.`
   : msg);
 
-// A farmer reports yield only for a crop he/she has registered (Crop Registration), and can
+// A farmer reports harvest only for a crop he/she has registered (Crop Registration), and can
 // edit a report if something was typed wrong (an edited report goes back to Pending).
 export default function FarmerYield() {
   const { farmer } = useAuth();
@@ -76,7 +76,7 @@ export default function FarmerYield() {
     e.preventDefault();
     if (!farmer?.id) return showToast("Your farmer profile could not be loaded. Please sign in again.", "fa-triangle-exclamation");
     if (!form.crop_name) return showToast("Please choose the crop.", "fa-triangle-exclamation");
-    if (Number(form.quantity) <= 0) return showToast(tr("Yield quantity must be greater than zero."), "fa-triangle-exclamation");
+    if (Number(form.quantity) <= 0) return showToast(tr("Harvest quantity must be greater than zero."), "fa-triangle-exclamation");
     if (form.unit === OTHER && !form.unit_other.trim()) return showToast(tr("Please specify exactly what unit you used."), "fa-triangle-exclamation");
 
     // only send the "other unit" columns when they are needed, so a normal report never depends on them
@@ -100,8 +100,8 @@ export default function FarmerYield() {
     if (error) return showToast(friendly(error.message), "fa-triangle-exclamation");
 
     const unitText = form.unit === OTHER ? form.unit_other.trim() : form.unit;
-    logActivity(`${editing ? "Edited yield report" : "Reported yield"}: ${body.crop_name} — ${form.quantity} ${unitText}`, "yield");
-    showToast(editing ? "Yield report updated — it goes back to the admin for verification." : tr("Yield reported — pending verification."), "fa-wheat-awn");
+    logActivity(`${editing ? "Edited harvest report" : "Reported harvest"}: ${body.crop_name} — ${form.quantity} ${unitText}`, "yield");
+    showToast(editing ? "Harvest report updated — it goes back to the admin for verification." : tr("Harvest reported — pending verification."), "fa-wheat-awn");
     setOpen(false); setEditing(null);
     load();
   }
@@ -112,17 +112,17 @@ export default function FarmerYield() {
   return (
     <section>
       <div className="view-head">
-        <h2><i className="fa-solid fa-wheat-awn"></i> {tr("My Yield Records")}</h2>
+        <h2><i className="fa-solid fa-wheat-awn"></i> {tr("My Harvest Records")}</h2>
         <div className="head-actions">
           <select className="filter-select" value={filter} onChange={(e) => setFilter(e.target.value)}>
             <option>{tr("All")}</option><option>{tr("Pending")}</option><option>{tr("Verified")}</option><option>{tr("Rejected")}</option>
           </select>
-          <button className="btn-primary" onClick={openNew}><i className="fa-solid fa-plus"></i> {tr("Report Yield")}</button>
+          <button className="btn-primary" onClick={openNew}><i className="fa-solid fa-plus"></i> {tr("Report Harvest")}</button>
         </div>
       </div>
       {noCrops && (
         <p className="hint-text" style={{ border: "1px solid var(--gold-light)", background: "rgba(232,184,75,.12)", borderRadius: 10, padding: "10px 12px" }}>
-          <i className="fa-solid fa-triangle-exclamation"></i> You need to register a crop first before you can report a yield.{" "}
+          <i className="fa-solid fa-triangle-exclamation"></i> You need to register a crop first before you can report a harvest.{" "}
           <a href="#" onClick={(e) => { e.preventDefault(); navigate("/farmer/crops"); }}>Go to Crop Registration</a>
         </p>
       )}
@@ -131,7 +131,7 @@ export default function FarmerYield() {
         <table className="data-table">
           <thead><tr><th>{tr("Crop / Plant Name")}</th><th>{tr("Season")}</th><th>{tr("Quantity")}</th><th>{tr("Unit")}</th><th>{tr("Harvest Date")}</th><th>{tr("Status")}</th><th></th></tr></thead>
           <tbody>
-            {filteredRows.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--ink-soft)" }}>{tr("No yield reports yet.")}</td></tr>}
+            {filteredRows.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", color: "var(--ink-soft)" }}>{tr("No harvest reports yet.")}</td></tr>}
             {filteredRows.map((r) => (
               <tr key={r.id}>
                 <td>{r.crop_name}</td><td>{r.season}</td><td>{Number(r.quantity).toLocaleString()}</td><td>{tr(yieldUnitText(r))}</td><td>{r.harvest_date}</td>
@@ -146,7 +146,7 @@ export default function FarmerYield() {
       {/* no registered crop yet */}
       <Modal open={needCrop} onClose={() => setNeedCrop(false)} title="Register a crop first" icon="fa-triangle-exclamation">
         <div className="modal-body">
-          <p style={{ margin: 0 }}>You need to register a crop first. A yield can only be reported for a crop that is in your <b>Crop Registration</b>.</p>
+          <p style={{ margin: 0 }}>You need to register a crop first. A harvest can only be reported for a crop that is in your <b>Crop Registration</b>.</p>
           <div className="modal-actions">
             <button type="button" className="btn-ghost" onClick={() => setNeedCrop(false)}>Close</button>
             <button type="button" className="btn-primary" onClick={() => { setNeedCrop(false); navigate("/farmer/crops"); }}><i className="fa-solid fa-tractor"></i> Go to Crop Registration</button>
@@ -155,7 +155,7 @@ export default function FarmerYield() {
       </Modal>
 
       {/* report / edit */}
-      <Modal open={open} onClose={close} title={editing ? "Edit Yield Report" : tr("Report Yield")} icon="fa-wheat-awn">
+      <Modal open={open} onClose={close} title={editing ? "Edit Harvest Report" : tr("Report Harvest")} icon="fa-wheat-awn">
         <form className="modal-body" onSubmit={submit}>
           {editing && editing.status !== "Pending" && (
             <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-circle-info"></i> This report is <b>{editing.status}</b>. After you save, it goes back to <b>Pending</b> so the admin can verify the corrected numbers.</p>
@@ -164,7 +164,7 @@ export default function FarmerYield() {
           <p className="hint-text" style={{ margin: 0 }}><i className="fa-solid fa-circle-info"></i> Only crops you registered in Crop Registration are listed.</p>
           <label>{tr("Season")} <input type="text" value={form.season} onChange={(e) => setForm({ ...form, season: e.target.value })} placeholder={tr("e.g. Wet Season 2026")} required /></label>
           <div style={{ display: "flex", gap: 10 }}>
-            <label style={{ flex: 1 }}>{tr("Yield Quantity")} <input type="number" step="0.1" min="0.1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} required /></label>
+            <label style={{ flex: 1 }}>{tr("Harvest Quantity")} <input type="number" step="0.1" min="0.1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} required /></label>
             <label style={{ flex: 1 }}>{tr("Unit")} <select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>{YIELD_UNITS.map((u) => <option key={u} value={u}>{u === OTHER ? tr("Other (specify)") : tr(YIELD_UNIT_LABELS[u])}</option>)}</select></label>
           </div>
           {form.unit === OTHER && (

@@ -8,28 +8,19 @@ import SavedAccounts from "../../components/SavedAccounts.jsx";
 import ForgotPassword from "../../components/ForgotPassword.jsx";
 import { saveAccount } from "../../lib/savedAccounts";
 
-const ROLE_TABS = [
-  { key: "farmer", label: "Farmer", icon: "fa-user" },
-  { key: "admin", label: "ADMIN", icon: "fa-user-shield" },
-  { key: "president", label: "Association President", icon: "fa-user-tie" },
-];
-
 export default function Login() {
   const { login, logout, session, role, loading, profileError } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("farmer");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [remember, setRemember] = useState(true);
   const [savedTick, setSavedTick] = useState(0);
-  const [mode, setMode] = useState("login"); // "login" or "reset" (forgot password, Farmer tab only)
+  const [mode, setMode] = useState("login"); // "login" or "reset" (forgot password)
   const [notice, setNotice] = useState("");
 
   if (!loading && session && role) return <Navigate to={`/${role}`} replace />;
-
-  const ROLE_LABEL = { farmer: "Farmer", admin: "ADMIN", president: "Association President" };
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -37,9 +28,7 @@ export default function Login() {
     setSubmitting(true);
     try {
       const data = await login(email, password);
-      // Confirm this account's real role matches the tab the person picked
-      // — logging in as an ADMIN account from the Farmer tab (or any other
-      // mismatch) is rejected immediately, before they ever reach a dashboard.
+      // The account's own role decides where it goes: Farmer, ADMIN or Association President.
       const { data: profileRow, error: profileErr } = await supabase
         .from("profiles").select("role, full_name").eq("id", data.user.id).single();
       if (profileErr || !profileRow) {
@@ -47,16 +36,12 @@ export default function Login() {
         setError("Could not verify this account's role. Please try again.");
         return;
       }
-      if (profileRow.role !== activeTab) {
-        await supabase.auth.signOut();
-        setError(`This account is registered as ${ROLE_LABEL[profileRow.role] || profileRow.role}, not ${ROLE_LABEL[activeTab]}. Select the correct tab above and try again.`);
-        return;
-      }
-      if (remember) { saveAccount({ email, role: activeTab, name: profileRow.full_name }); setSavedTick((t) => t + 1); }
-      // Role matches — AuthContext's onAuthStateChange will pick up the
-      // session and populate `role`; the redirect above handles the rest.
+      if (remember) { saveAccount({ email, role: profileRow.role, name: profileRow.full_name }); setSavedTick((t) => t + 1); }
+      // AuthContext's onAuthStateChange picks up the session and fills in `role`;
+      // the <Navigate> at the top then opens the right page automatically.
     } catch (err) {
-      setError(err.message || "Invalid email or password.");
+      const m = err.message || "Invalid email or password.";
+      setError(/invalid login/i.test(m) ? `${m}. Farmer forgot the password? Tap "Forgot password?" and ask the ADMIN for a reset token.` : m);
     } finally {
       setSubmitting(false);
     }
@@ -84,24 +69,13 @@ export default function Login() {
           </div>
         )}
 
-        <div className="login-role-tabs">
-          {ROLE_TABS.map((t) => (
-            <button
-              key={t.key}
-              type="button"
-              className={`login-role-tab ${activeTab === t.key ? "active" : ""}`}
-              onClick={() => { setActiveTab(t.key); setEmail(""); setPassword(""); setError(""); setNotice(""); setMode("login"); }}
-            >
-              <i className={`fa-solid ${t.icon}`}></i> {t.label}
-            </button>
-          ))}
-        </div>
+        <p className="hint-text" style={{ margin: "0 0 12px" }}><i className="fa-solid fa-circle-info"></i> Sign in with your account. You will go straight to your own page (Farmer, ADMIN or Association President).</p>
 
         {notice && mode === "login" && (
           <p className="hint-text" style={{ color: "var(--forest-deep)", background: "var(--sage-pale)", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}><i className="fa-solid fa-circle-check"></i> {notice}</p>
         )}
 
-        {mode === "reset" && activeTab === "farmer" ? (
+        {mode === "reset" ? (
           <ForgotPassword
             defaultEmail={email}
             onBack={() => setMode("login")}
@@ -109,13 +83,13 @@ export default function Login() {
           />
         ) : (
           <>
-          <SavedAccounts role={activeTab} refreshKey={savedTick} onPick={(a) => { setEmail(a.email); setPassword(""); setError(""); setTimeout(() => document.getElementById("login-password")?.focus(), 0); }} />
+          <SavedAccounts refreshKey={savedTick} onPick={(a) => { setEmail(a.email); setPassword(""); setError(""); setTimeout(() => document.getElementById("login-password")?.focus(), 0); }} />
 
           <form onSubmit={handleSubmit} className="modal-body">
             <label>Email <input type="email" name="email" autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. renante.salvana@example.com" required /></label>
             <PasswordField value={password} onChange={(e) => setPassword(e.target.value)} />
             <label className="remember-row"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember this account on this device</label>
-            {activeTab === "farmer" && <button type="button" className="login-forgot" onClick={() => { setError(""); setNotice(""); setMode("reset"); }}>Forgot password?</button>}
+            <button type="button" className="login-forgot" onClick={() => { setError(""); setNotice(""); setMode("reset"); }}>Forgot password? (Farmers)</button>
             {error && <p className="hint-text" style={{ color: "var(--danger)" }}><i className="fa-solid fa-triangle-exclamation"></i> {error}</p>}
             <button type="submit" className="btn-primary login-submit" disabled={submitting}>
               {submitting ? <><i className="fa-solid fa-spinner fa-spin"></i> Signing in…</> : <><i className="fa-solid fa-right-to-bracket"></i> Sign In</>}

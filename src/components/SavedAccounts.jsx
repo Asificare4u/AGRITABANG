@@ -2,8 +2,8 @@ import React, { useEffect, useState } from "react";
 import { getSavedAccounts, removeSavedAccount } from "../lib/savedAccounts";
 import "./login-about.css";
 
-// Shows ONLY the accounts saved for the tab that is selected (Farmer, ADMIN or President).
-// Nothing is shown when there is no saved account for that role.
+// Shows the accounts saved on this device (any role). Nothing is shown when there are none.
+const ROLE_LABEL = { farmer: "Farmer", admin: "ADMIN", president: "Association President" };
 export default function SavedAccounts({ role, onPick, refreshKey = 0 }) {
   const [list, setList] = useState([]);
   useEffect(() => { setList(getSavedAccounts(role)); }, [role, refreshKey]);
@@ -19,11 +19,11 @@ export default function SavedAccounts({ role, onPick, refreshKey = 0 }) {
               <span className="saved-avatar">{(a.name || a.email).trim()[0]?.toUpperCase()}</span>
               <span className="saved-text">
                 <b>{a.name || a.email}</b>
-                {a.name ? <small>{a.email}</small> : null}
+                <small>{ROLE_LABEL[a.role] || a.role} · {a.email}</small>
               </span>
             </button>
             <button type="button" className="saved-x" aria-label={`Forget ${a.email}`} title="Forget this account"
-              onClick={() => { removeSavedAccount(a.email, role); setList(getSavedAccounts(role)); }}>×</button>
+              onClick={() => { removeSavedAccount(a.email, a.role); setList(getSavedAccounts(role)); }}>×</button>
           </div>
         ))}
       </div>

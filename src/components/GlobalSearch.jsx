@@ -16,7 +16,7 @@ const GROUPS = [
   ["crops", "Registered crops", "fa-tractor"],
   ["assistance", "Assistance records", "fa-hand-holding-dollar"],
   ["assistanceAnn", "Assistance programs", "fa-hand-holding-heart"],
-  ["yield", "Yield records", "fa-wheat-awn"],
+  ["yield", "Harvest records", "fa-wheat-awn"],
   ["insurance", "Crop insurance", "fa-shield-halved"],
   ["announcements", "Announcements", "fa-bullhorn"],
   ["policies", "Policies", "fa-scroll"],

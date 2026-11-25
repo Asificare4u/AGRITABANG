@@ -183,7 +183,7 @@ export function notificationPath(n, role) {
     application: `/${role}/assistance`,        // admin: a farmer applied                          -> Assistance Management
     crop_verification: `/${role}/crops`,       // admin: a crop waits for verification             -> Crop Approval
     crop: `/${role}/crops`,                    // farmer: result of a crop registration            -> Crop Registration
-    yield: `/${role}/yield`,                   // admin: Yield Reports · farmer: My Yield Records
+    yield: `/${role}/yield`,                   // admin: Harvest Reports · farmer: My Harvest Records
     insurance: `/${role}/insurance`,           // admin: a farmer filed a claim · farmer: result of the claim
   };
   if (n.category && byCategory[n.category]) return byCategory[n.category];
@@ -191,7 +191,7 @@ export function notificationPath(n, role) {
   const t = plain(n.message);
   if (/application was marked|applied for/.test(t)) return `/${role}/assistance`;
   if (/profile update|profile was/.test(t)) return `/${role}/profile`;
-  if (/yield/.test(t)) return `/${role}/yield`;
+  if (/yield|harvest/.test(t)) return `/${role}/yield`;   // older notifications say "yield", new ones say "harvest"
   if (/crop registration|registered crop|crop/.test(t)) return `/${role}/crops`;
   if (/insurance/.test(t)) return `/${role}/insurance`;
   if (/eligible|was posted/.test(t)) return `/${role}/eligibility`;

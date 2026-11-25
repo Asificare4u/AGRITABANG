@@ -8,18 +8,18 @@ import Modal from "../../components/Modal.jsx";
 import { prettyDate } from "../../lib/harvest";
 
 const REPORT_OPTIONS = [
-  { value: "all", label: "All Yield Records" },
-  { value: "verified", label: "Verified Yield" },
-  { value: "pending", label: "Pending Yield" },
-  { value: "by_crop", label: "Yield by Crop" },
-  { value: "by_farmer", label: "Yield by Farmer" },
-  { value: "by_date", label: "Yield by Date" },
+  { value: "all", label: "All Harvest Records" },
+  { value: "verified", label: "Verified Harvest" },
+  { value: "pending", label: "Pending Harvest" },
+  { value: "by_crop", label: "Harvest by Crop" },
+  { value: "by_farmer", label: "Harvest by Farmer" },
+  { value: "by_date", label: "Harvest by Date" },
 ];
 
 function ReportTable({ rows, onView, assoc = {} }) {
   return (
-    <table className="data-table">
-      <thead><tr><th>Farmer</th><th>Association</th><th>Crop / Plant Name</th><th>Farm Area</th><th>Planting Date</th><th>Harvest Date</th><th>Yield Qty</th><th>Unit</th><th>Submitted</th><th>Status</th><th>Verified By</th><th></th></tr></thead>
+    <table className="data-table print-table">
+      <thead><tr><th>Farmer</th><th>Association</th><th>Crop / Plant Name</th><th>Farm Area</th><th>Planting Date</th><th>Harvest Date</th><th>Harvest Qty</th><th>Unit</th><th>Submitted</th><th>Status</th><th>Verified By</th><th className="no-print"></th></tr></thead>
       <tbody>
         {rows.length === 0 && <tr><td colSpan={12} style={{ textAlign: "center", color: "var(--ink-soft)" }}>No records.</td></tr>}
         {rows.map((r) => (
@@ -30,7 +30,7 @@ function ReportTable({ rows, onView, assoc = {} }) {
             <td>{new Date(r.submitted_at).toLocaleDateString("en-PH")}</td>
             <td><StatusBadge status={r.status} /></td>
             <td>{r.verified_by_name || "—"}</td>
-            <td>
+            <td className="no-print">
               <button className="btn-ghost" style={{ padding: "4px 10px", fontSize: ".72rem" }} onClick={() => onView(r)} title={r.status === "Pending" ? "View the report, then verify or reject it" : "View details"} aria-label="View report">
                 <i className="fa-solid fa-eye"></i> {r.status === "Pending" ? "Review" : "View"}
               </button>
@@ -89,13 +89,13 @@ export default function YieldReports() {
 
   async function setStatus(r, status) {
     const id = r.id;
-    const what = `${r.farmer_name ? `${r.farmer_name}'s ` : ""}${r.crop_name || "yield"} yield report (${Number(r.quantity).toLocaleString()} ${yieldUnitText(r)})`;
+    const what = `${r.farmer_name ? `${r.farmer_name}'s ` : ""}${r.crop_name ? `${r.crop_name} ` : ""}harvest report (${Number(r.quantity).toLocaleString()} ${yieldUnitText(r)})`;
     if (!confirm(`Are you sure you want to ${status === "Verified" ? "verify" : "reject"} ${what}?`)) return false;
     const { data: { user } } = await supabase.auth.getUser();
     const { error } = await supabase.from("yield_records").update({ status, verified_by: user?.id }).eq("id", id);
     if (error) { showToast(error.message, "fa-triangle-exclamation"); return false; }
-    logActivity(`Marked a yield record ${status.toLowerCase()}`, "yield");
-    showToast(`Yield record marked ${status.toLowerCase()}.`, "fa-wheat-awn");
+    logActivity(`Marked a harvest record ${status.toLowerCase()}`, "yield");
+    showToast(`Harvest record marked ${status.toLowerCase()}.`, "fa-wheat-awn");
     load();
     return true;
   }
@@ -115,9 +115,15 @@ export default function YieldReports() {
 
   return (
     <section>
-      <div className="view-head">
-        <h2><i className="fa-solid fa-file-lines"></i> Yield Reports</h2>
+      <div className="print-only print-report-header">
+        <h1>AgriTabang — Harvest Reports</h1>
+        <p>{REPORT_OPTIONS.find((o) => o.value === report)?.label} · {filteredRows.length} record{filteredRows.length === 1 ? "" : "s"} · Verified (all-time): {verifiedCount} · Pending (all-time): {pendingCount} · Total: {totalKg.toLocaleString()} kg-equivalent</p>
+        <p>Newest report first · Generated {new Date().toLocaleString("en-PH")}</p>
+      </div>
+      <div className="view-head no-print">
+        <h2><i className="fa-solid fa-file-lines"></i> Harvest Reports</h2>
         <div className="head-actions">
+          <button className="btn-primary" onClick={() => window.print()}><i className="fa-solid fa-print"></i> Print</button>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".82rem", color: "var(--ink-soft)" }}>
             Select Report
             <select className="filter-select" value={report} onChange={(e) => setReport(e.target.value)}>
@@ -126,9 +132,9 @@ export default function YieldReports() {
           </label>
         </div>
       </div>
-      <p className="hint-text"><i className="fa-solid fa-circle-info"></i> Submitted farmer harvest data, newest report first. Farm Area and Planting Date are pulled from each farmer's matching Crop Registration. Press <b>Review</b> to open a report — it can only be verified or rejected from there.</p>
+      <p className="hint-text no-print"><i className="fa-solid fa-circle-info"></i> Submitted farmer harvest data, newest report first. Farm Area and Planting Date are pulled from each farmer's matching Crop Registration. Press <b>Review</b> to open a report — it can only be verified or rejected from there.</p>
 
-      <div className="stat-grid" style={{ marginBottom: 18 }}>
+      <div className="stat-grid no-print" style={{ marginBottom: 18 }}>
         <div className="stat-card ring-total"><div className="stat-num">{filteredRows.length}</div><div className="stat-label">Records in this report</div></div>
         <div className="stat-card ring-resolved"><div className="stat-num">{verifiedCount}</div><div className="stat-label">Verified (all-time)</div></div>
         <div className="stat-card ring-pending"><div className="stat-num">{pendingCount}</div><div className="stat-label">Pending (all-time)</div></div>
@@ -141,8 +147,10 @@ export default function YieldReports() {
         <div className="table-panel"><ReportTable rows={filteredRows} onView={onView} assoc={assoc} /></div>
       )}
 
+      <div className="print-only print-sign"><div><span></span>Prepared by</div><div><span></span>Noted by</div></div>
+
       {/* REVIEW A REPORT: the admin sees every detail first, then verifies or rejects */}
-      <Modal open={!!viewRow} onClose={() => setViewRow(null)} title="Yield report" icon="fa-wheat-awn">
+      <Modal open={!!viewRow} onClose={() => setViewRow(null)} title="Harvest report" icon="fa-wheat-awn">
         {viewRow && (
           <div className="modal-body">
             <table className="data-table" style={{ margin: 0 }}>
@@ -155,7 +163,7 @@ export default function YieldReports() {
                   ["Farm area", viewRow.farm_area ? `${viewRow.farm_area} ha` : "—"],
                   ["Planting date", viewRow.planting_date ? prettyDate(viewRow.planting_date) : "—"],
                   ["Harvest date", prettyDate(viewRow.harvest_date)],
-                  ["Yield reported", `${Number(viewRow.quantity).toLocaleString()} ${yieldUnitText(viewRow)}`],
+                  ["Harvest reported", `${Number(viewRow.quantity).toLocaleString()} ${yieldUnitText(viewRow)}`],
                   ["Kg-equivalent", `${Number(viewRow.quantity_kg).toLocaleString()} kg`],
                   ["Submitted", new Date(viewRow.submitted_at).toLocaleString("en-PH")],
                   ["Verified by", viewRow.verified_by_name || "—"],
