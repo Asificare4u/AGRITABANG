@@ -20,7 +20,6 @@ export const NAV = {
       ],
     },
     { to: "/farmer/policies", label: "Association Policies", icon: "fa-scroll" },
-    { to: "/farmer/activity-log", label: "Activity Log", icon: "fa-clock-rotate-left" },
   ],
   admin: [
     { to: "/admin", label: "Dashboard", icon: "fa-chart-line", end: true },

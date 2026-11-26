@@ -58,7 +58,6 @@ export default function App() {
       <Route path="/farmer" element={<ProtectedRoute allow="farmer"><Layout role="farmer" /></ProtectedRoute>}>
         <Route index element={<FarmerDashboard />} />
         <Route path="profile" element={<FarmerProfile />} />
-        <Route path="activity-log" element={<ActivityLog />} />
         <Route path="crops" element={<FarmerCrops />} />
         <Route path="yield" element={<FarmerYield />} />
         <Route path="insurance" element={<FarmerInsurance />} />
